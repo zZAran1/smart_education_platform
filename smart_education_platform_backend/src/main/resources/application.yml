@@ -1,0 +1,68 @@
+# =============================================================
+# 智慧教育平台 后端配置
+#
+# =============================================================
+
+server:
+  port: ${SERVER_PORT:8080} # 服务端口，可用环境变量 SERVER_PORT 覆盖
+
+spring:
+  application:
+    name: smart-education-platform-backend
+
+  # 默认激活 local 环境；生产环境通过环境变量 SPRING_PROFILES_ACTIVE=prod 覆盖
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://localhost:3306/smart_education_platform?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}   # 数据库账号，默认 root
+    password: ${DB_PASSWORD:}       # 数据库密码：无默认值，必须由环境变量或 local 配置提供
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+      password: ${REDIS_PASSWORD:}  # 本地无密码留空；生产用环境变量注入
+      timeout: 5000ms
+
+  # Spring Cache 注解缓存（@Cacheable/@CacheEvict）走 Redis
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000   # 全局默认 TTL 10 分钟（毫秒）
+      key-prefix: "edu:"     # 缓存 key 统一前缀
+      use-key-prefix: true
+      cache-null-values: false
+
+  # 文件上传限制（头像/简历）
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+# MyBatis-Plus
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml # XML 映射文件位置
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 开发期控制台打印 SQL
+    map-underscore-to-camel-case: false # 关闭驼峰转换，实体字段沿用下划线命名
+  global-config:
+    banner: false
+    db-config:
+      id-type: AUTO            # 主键自增，与建表 SQL 一致
+      logic-delete-field: deleted    # 逻辑删除字段
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# JWT 认证
+jwt:
+  secret: ${JWT_SECRET:}      # Base64 编码密钥：绝不写死在仓库中
+  expiration: 604800000       # 有效期 7 天（毫秒）
+
+# 文件上传存储路径
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:/uploads} # 本地默认值；Windows 可用 D:\\Work\\upload

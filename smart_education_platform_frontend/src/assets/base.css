@@ -1,0 +1,178 @@
+/**
+ * 智慧教育平台 · 设计令牌与基础样式
+ *
+ * 基调：更简洁的学术风 —— 低饱和中性灰 + 单一强调色（深学术蓝），
+ * 白底卡片承载内容，强调信息的可扫读性。
+ * 业务组件统一通过下方令牌取色/取距，不要散落硬编码值。
+ */
+
+:root {
+  /* ---------- 色板：强调色（单一） ---------- */
+  --color-primary: #1a4a7a;                 /* 深学术蓝，主按钮 / 链接 / 强调 */
+  --color-primary-hover: #215c96;
+  --color-primary-active: #143d64;
+  --color-primary-soft: rgba(26, 74, 122, 0.09);   /* 强调色浅底 */
+  --color-primary-border: rgba(26, 74, 122, 0.38); /* 强调色浅描边 */
+  --color-primary-glow: rgba(26, 74, 122, 0.18);
+
+  /* ---------- 色板：中性灰阶 ---------- */
+  --color-bg: #f4f6f8;              /* 页面底色 */
+  --color-card: #ffffff;            /* 卡片 / 浮层底色 */
+  --color-border: #e4e7eb;          /* 常规分隔线 */
+  --color-border-strong: #c9cfd6;   /* 输入框 / 需要更明确的描边 */
+
+  /* 文本灰阶（灰调偏冷，衬中性背景与强调蓝） */
+  --color-text: #232b36;
+  --color-text-secondary: #5a6574;
+  --color-text-tertiary: #6c7684;
+
+  /* ---------- 色板：功能色 ---------- */
+  --color-danger: #b3261e;
+  --color-danger-soft: rgba(179, 38, 30, 0.1);
+  --color-success: #1f7a45;
+  --color-success-soft: rgba(31, 122, 69, 0.1);
+  --color-warning: #8a5f00;
+  --color-warning-soft: #fbf0dc;
+
+  /* ---------- 字体 ---------- */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  /* 数字 / 时长等度量数据使用，对齐稳定 */
+  --font-num: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Segoe UI Mono',
+    Consolas, 'Liberation Mono', Menlo, monospace;
+
+  /* ---------- 间距 ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* ---------- 圆角 ---------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* ---------- 阴影：带偏移与柔和模糊 ---------- */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.09);
+  --shadow-lg: 0 14px 30px rgba(15, 23, 42, 0.13);
+
+  /* ---------- 动效 ---------- */
+  --dur-fast: 0.15s;
+  --dur-base: 0.22s;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============================================================
+ * Reset 与基础元素
+ * ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.7;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+/* 键盘可达焦点 */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

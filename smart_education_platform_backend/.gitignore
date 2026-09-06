@@ -1,0 +1,50 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+###application.yml###
+application-local.yml
+application-local.yaml
+application-*.local.yml
+application-*.local.yaml
+bootstrap-local.yml
+secrets.yml
+*.secret.yml
+.env
+.env.local
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+# ========== 日志和运行时 ==========
+*.log
+logs/
+nohup.out
+hs_err_pid*.log
+heapdump.hprof
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+# ========== 操作系统垃圾文件 ==========
+.DS_Store
+Thumbs.db
+*.tmp
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/

@@ -1,0 +1,28 @@
+package com.example.smart_education_platform_backend.model.vo;
+
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+public class CourseCardVO {
+    private Long id;
+    private String title;
+    private Integer type;
+    private Long tech_system_id;
+    private Long tech_direction_id;
+    private Integer level;
+    private String cover;
+    private Long teacher_id;
+    private String teacher_name;
+    private Integer courseware_count;
+    private Integer video_count;
+    private Integer lab_count;
+    private Integer is_free;
+    private BigDecimal price;
+    private BigDecimal score;
+    private Integer rating_count;
+    private Integer student_count;
+    private LocalDateTime publish_time;
+}
