@@ -54,6 +54,14 @@ async function request<T>(config: AxiosRequestConfig): Promise<T> {
 export const http = {
   get: <T>(url: string, params?: Record<string, unknown>) => request<T>({ url, method: 'get', params }),
   post: <T>(url: string, data?: unknown) => request<T>({ url, method: 'post', data }),
+  put: <T>(url: string, data?: unknown) => request<T>({ url, method: 'put', data }),
+  delete: <T>(url: string, params?: Record<string, unknown>) => request<T>({ url, method: 'delete', params }),
+  /** multipart 上传（默认 PUT + 字段名 file，头像/简历等使用） */
+  upload: <T>(url: string, file: File, field = 'file') => {
+    const form = new FormData()
+    form.append(field, file)
+    return request<T>({ url, method: 'put', data: form })
+  },
 }
 
 export default http

@@ -2,19 +2,27 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authState, clearAuth, isLoggedIn } from '@/stores/auth'
+import { logout as logoutApi } from '@/api/user'
 import { showToast } from '@/composables/toast'
+import { ROLE } from '@/types/api'
 
 const router = useRouter()
 const route = useRoute()
 
-/** 顶部一级入口：当前是否处于"课程中心"模块 */
 const atCourse = computed(() => route.path.startsWith('/course'))
+const atJob = computed(() => route.path.startsWith('/job'))
+const isAdmin = computed(() => authState.userInfo?.role === ROLE.ADMIN)
 
 const displayName = computed(
-  () => authState.userInfo?.nickname || authState.userInfo?.username || '用 户',
+  () => authState.userInfo?.nickname || authState.userInfo?.username || '用户',
 )
 
-function logout(): void {
+async function logout(): Promise<void> {
+  try {
+    await logoutApi()
+  } catch {
+    /* 即使后端失败也清除本地登录态 */
+  }
   clearAuth()
   showToast('已退出登录', 'success')
   router.push('/login')
@@ -30,14 +38,21 @@ function logout(): void {
       </button>
 
       <nav class="nav" aria-label="一级导航">
-        <RouterLink to="/course/0" class="nav-link" :class="{ active: atCourse }">
-          课程中心
-        </RouterLink>
+        <RouterLink to="/course/0" class="nav-link" :class="{ active: atCourse }">课程中心</RouterLink>
+        <RouterLink to="/job" class="nav-link" :class="{ active: atJob }">实习就业</RouterLink>
       </nav>
 
       <div class="header-right">
         <template v-if="isLoggedIn()">
-          <button class="user-chip" type="button" :title="`账号：${authState.userInfo?.username ?? ''}`">
+          <button
+            v-if="isAdmin"
+            class="btn btn-sm admin-btn"
+            type="button"
+            @click="router.push('/admin')"
+          >
+            后台管理
+          </button>
+          <button class="user-chip" type="button" :title="`账号：${authState.userInfo?.username ?? ''}`" @click="router.push('/profile')">
             <span class="user-avatar" aria-hidden="true">{{ displayName.charAt(0).toUpperCase() }}</span>
             <span class="user-name">{{ displayName }}</span>
           </button>
@@ -101,13 +116,13 @@ function logout(): void {
 .nav {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-4);
   flex: 1;
 }
 
 .nav-link {
   position: relative;
-  padding: 8px 4px;
+  padding: 8px 2px;
   font-size: 15px;
   color: var(--color-text);
   transition: color var(--dur-fast) ease;
@@ -142,6 +157,11 @@ function logout(): void {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.admin-btn {
+  color: var(--color-primary);
+  border-color: var(--color-primary-border);
 }
 
 .user-chip {

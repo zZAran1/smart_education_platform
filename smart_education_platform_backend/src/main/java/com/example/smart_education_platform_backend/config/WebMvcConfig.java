@@ -27,6 +27,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/user/login",
                         "/api/user/register",
                         "/api/user/captcha",
+                        "/api/user/reset-code",
                         "/api/user/reset-password",
                         // 课程/职位公开查询接口（游客可浏览，无需登录增强）
                         "/api/course/categories",

@@ -22,6 +22,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String TOKEN_BLACKLIST_PREFIX = "edu:token:blacklist:";
+    private static final String BANNED_USER_PREFIX = "edu:user:banned:";
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     /** 游客可浏览但登录后需增强（收藏状态、学习进展等）的 GET 路径 */
@@ -59,7 +60,12 @@ public class AuthInterceptor implements HandlerInterceptor {
             throw new TokenException("登录已失效");
         }
         // ③ 解析身份（过期/非法抛 TokenException）
-        UserContext.set(jwtUtil.getUserId(token), jwtUtil.getRole(token));
+        String userId = jwtUtil.getUserId(token);
+        // ④ 封禁即时失效：命中封禁标记则拒绝已签发 Token
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(BANNED_USER_PREFIX + userId))) {
+            throw new TokenException("账号已被封禁");
+        }
+        UserContext.set(userId, jwtUtil.getRole(token));
         return true;
     }
 

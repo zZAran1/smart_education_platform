@@ -2,12 +2,17 @@ package com.example.smart_education_platform_backend.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.example.smart_education_platform_backend.model.dto.CourseCommentDTO;
 import com.example.smart_education_platform_backend.model.dto.CourseQueryDTO;
+import com.example.smart_education_platform_backend.model.dto.CourseQuestionDTO;
 import com.example.smart_education_platform_backend.model.entity.Course;
 import com.example.smart_education_platform_backend.model.vo.CourseCardVO;
 import com.example.smart_education_platform_backend.model.vo.CourseCategoryVO;
 import com.example.smart_education_platform_backend.model.vo.CourseChapterVO;
+import com.example.smart_education_platform_backend.model.vo.CourseCommentVO;
 import com.example.smart_education_platform_backend.model.vo.CourseDetailVO;
+import com.example.smart_education_platform_backend.model.vo.CourseEnrollVO;
+import com.example.smart_education_platform_backend.model.vo.CourseQuestionVO;
 
 import java.util.List;
 
@@ -27,4 +32,25 @@ public interface CourseService extends IService<Course> {
 
     /** 课程目录（按排序号升序） */
     List<CourseChapterVO> getChapters(Long courseId);
+
+    /** 收藏/取消收藏（切换，幂等），返回收藏后的状态 */
+    Boolean toggleCollect(Long courseId);
+
+    /** 立即学习：免费直接报名，收费生成待支付订单 */
+    CourseEnrollVO enroll(Long courseId);
+
+    /** 评论分页（仅展示正常评论） */
+    Page<CourseCommentVO> pageComments(Long courseId, Integer pageNum, Integer pageSize);
+
+    /** 发表评论+评分（须已报名，每人每课仅一条） */
+    void addComment(Long courseId, CourseCommentDTO dto);
+
+    /** 答疑列表（按时间倒序） */
+    List<CourseQuestionVO> listQuestions(Long courseId);
+
+    /** 提交答疑问题 */
+    void addQuestion(Long courseId, CourseQuestionDTO dto);
+
+    /** 标记章节/资源学完，更新学习进展 */
+    void finishChapter(Long chapterId);
 }

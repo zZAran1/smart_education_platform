@@ -22,6 +22,7 @@ public class Job {
     private String description;
     private String requirement;
     private Integer status;
+    private LocalDateTime expire_time;
     private Integer deleted;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;

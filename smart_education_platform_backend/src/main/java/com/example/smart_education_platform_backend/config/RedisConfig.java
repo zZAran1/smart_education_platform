@@ -42,6 +42,7 @@ public class RedisConfig {
         Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
         cacheConfigs.put("courseList", defaultConfig.entryTtl(Duration.ofMinutes(5)));
         cacheConfigs.put("courseDetail", defaultConfig.entryTtl(Duration.ofMinutes(10)));
+        cacheConfigs.put("jobList", defaultConfig.entryTtl(Duration.ofMinutes(5)));
         cacheConfigs.put("jobDetail", defaultConfig.entryTtl(Duration.ofMinutes(10)));
         cacheConfigs.put("courseCategory", defaultConfig.entryTtl(Duration.ofHours(24)));
         cacheConfigs.put("jobCategory", defaultConfig.entryTtl(Duration.ofHours(24)));

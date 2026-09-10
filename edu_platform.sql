@@ -233,11 +233,13 @@ CREATE TABLE `job` (
   `description` TEXT         COMMENT '职位描述（岗位职责）',
   `requirement` TEXT         COMMENT '任职要求',
   `status`      TINYINT      NOT NULL DEFAULT 1 COMMENT '0下架 1上架',
+  `expire_time` DATETIME     DEFAULT NULL COMMENT '职位到期下架时间，NULL 表示长期有效',
   `deleted`     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除 0否 1是',
   `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_status_category` (`status`,`category_id`),
+  KEY `idx_status_expire` (`status`,`expire_time`),
   KEY `idx_title` (`title`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='职位表';
 
