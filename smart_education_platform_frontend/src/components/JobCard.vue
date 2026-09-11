@@ -82,13 +82,11 @@ function goDetail(): void {
 
 .salary {
   flex-shrink: 0;
-  padding: 3px 12px;
-  border-radius: 999px;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-size: 15px;
-  font-weight: 700;
   font-family: var(--font-num);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-primary);
 }
 
 .company {
@@ -146,7 +144,7 @@ function goDetail(): void {
   align-items: center;
   gap: var(--space-4);
   padding-top: var(--space-3);
-  border-top: 1px dashed var(--color-border);
+  border-top: 1px solid var(--color-border);
   font-size: 12px;
   color: var(--color-text-tertiary);
 }

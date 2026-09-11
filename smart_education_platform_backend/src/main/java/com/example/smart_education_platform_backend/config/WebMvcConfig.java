@@ -23,17 +23,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
-                        // 公开白名单
-                        "/api/user/login",
-                        "/api/user/register",
+                        // 仅保留完成登录认证所必需的匿名接口；
+                        // 其余 /api/** 一律要求携带 Token，由 AuthInterceptor 校验 userId / role
                         "/api/user/captcha",
+                        "/api/user/register",
+                        "/api/user/login",
                         "/api/user/reset-code",
                         "/api/user/reset-password",
-                        // 课程/职位公开查询接口（游客可浏览，无需登录增强）
-                        "/api/course/categories",
-                        "/api/course/page",
-                        "/api/job/categories",
-                        "/api/job/page",
                         "/error"
                 );
     }

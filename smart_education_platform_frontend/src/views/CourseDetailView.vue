@@ -51,6 +51,16 @@ const questionsLoaded = ref(false)
 const courseId = computed(() => Number(route.params.id))
 const moduleName = computed(() => COURSE_TYPE_MAP.get(course.value?.type ?? 0) || '课程中心')
 const coverText = computed(() => (course.value?.title || '课').trim().charAt(0).toUpperCase())
+
+/** 详情页封面用同色系深色面板，与列表页的浅色卡片形成层级对比 */
+const HUE_BY_TYPE: Record<number, number> = { 0: 212, 1: 176, 2: 28 }
+
+const coverStyle = computed(() => {
+  const hue = HUE_BY_TYPE[course.value?.type ?? 0] ?? 212
+  return {
+    background: `linear-gradient(150deg, hsl(${hue} 34% 31%) 0%, hsl(${hue} 42% 19%) 100%)`,
+  }
+})
 const levelLabel = computed(() =>
   course.value ? COURSE_LEVEL_MAP.get(course.value.level) || `Lv.${course.value.level}` : '',
 )
@@ -259,10 +269,8 @@ watch(courseId, fetchAll, { immediate: true })
       </nav>
 
       <section class="detail-head">
-        <div class="cover" :style="{ background: `hsl(${(course.id * 47) % 360} 50% 50%)` }">
-          <span class="cover-text" aria-hidden="true">{{ coverText }}</span>
-          <span class="cover-level">{{ levelLabel }}</span>
-          <span class="cover-price">{{ priceText }}</span>
+        <div class="cover" :style="coverStyle">
+          <span class="cover-mark" aria-hidden="true">{{ coverText }}</span>
         </div>
 
         <div class="head-info">
@@ -307,6 +315,7 @@ watch(courseId, fetchAll, { immediate: true })
           </div>
 
           <div class="actions">
+            <span class="price-tag" :class="{ free: course.is_free === 1 }">{{ priceText }}</span>
             <button
               class="btn collect-btn"
               :class="{ on: course.is_collected }"
@@ -496,10 +505,8 @@ watch(courseId, fetchAll, { immediate: true })
 
 /* ---------- 详情头 ---------- */
 .detail-head { display: flex; gap: var(--space-6); padding: var(--space-5); background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
-.cover { position: relative; display: flex; align-items: center; justify-content: center; width: 280px; height: 190px; flex-shrink: 0; overflow: hidden; border-radius: var(--radius-md); color: rgba(255, 255, 255, 0.96); }
-.cover-text { font-size: 68px; font-weight: 700; letter-spacing: 0.02em; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.2); }
-.cover-level { position: absolute; top: 12px; left: 12px; padding: 3px 10px; border-radius: 999px; background: rgba(23, 35, 61, 0.4); color: #fff; font-size: 12px; }
-.cover-price { position: absolute; top: 12px; right: 12px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, 0.22); color: #fff; }
+.cover { position: relative; display: flex; align-items: center; justify-content: center; width: 280px; height: 190px; flex-shrink: 0; overflow: hidden; border-radius: var(--radius-md); color: #fff; }
+.cover-mark { font-size: 64px; font-weight: 700; line-height: 1; opacity: 0.88; user-select: none; }
 .head-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .title { font-size: 22px; font-weight: 700; line-height: 1.35; letter-spacing: -0.01em; }
 .meta-line { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
@@ -526,7 +533,9 @@ watch(courseId, fetchAll, { immediate: true })
 .progress-percent { color: var(--color-primary); font-weight: 600; font-family: var(--font-num); }
 .progress-track { height: 6px; overflow: hidden; border-radius: 999px; background: var(--color-bg); }
 .progress-fill { height: 100%; border-radius: 999px; background: var(--color-primary); transition: transform var(--dur-base) var(--ease-out); }
-.actions { display: flex; gap: var(--space-2); margin-top: auto; padding-top: var(--space-4); }
+.actions { display: flex; align-items: center; gap: var(--space-2); margin-top: auto; padding-top: var(--space-4); }
+.price-tag { margin-right: auto; font-family: var(--font-num); font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: var(--color-primary); }
+.price-tag.free { color: var(--color-success); }
 .collect-btn.on { color: var(--color-primary); border-color: var(--color-primary-border); background: var(--color-primary-soft); }
 .enroll-btn:disabled { opacity: 0.6; }
 

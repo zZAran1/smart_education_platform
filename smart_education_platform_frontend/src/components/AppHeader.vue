@@ -122,8 +122,12 @@ async function logout(): Promise<void> {
 
 .nav-link {
   position: relative;
-  padding: 8px 2px;
+  display: inline-flex;
+  align-items: center;
+  height: 60px;
+  padding: 0 2px;
   font-size: 15px;
+  line-height: 1;
   color: var(--color-text);
   transition: color var(--dur-fast) ease;
 }
@@ -133,7 +137,7 @@ async function logout(): Promise<void> {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -1px;
+  bottom: 0;
   height: 2px;
   border-radius: 2px;
   background: transparent;

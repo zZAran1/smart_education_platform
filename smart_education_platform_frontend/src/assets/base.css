@@ -11,20 +11,22 @@
   --color-primary: #1a4a7a;                 /* 深学术蓝，主按钮 / 链接 / 强调 */
   --color-primary-hover: #215c96;
   --color-primary-active: #143d64;
-  --color-primary-soft: rgba(26, 74, 122, 0.09);   /* 强调色浅底 */
-  --color-primary-border: rgba(26, 74, 122, 0.38); /* 强调色浅描边 */
-  --color-primary-glow: rgba(26, 74, 122, 0.18);
+  --color-primary-soft: rgba(26, 74, 122, 0.07);   /* 强调色浅底 */
+  --color-primary-border: rgba(26, 74, 122, 0.32); /* 强调色浅描边 */
+  --color-primary-ring: rgba(26, 74, 122, 0.13);   /* 输入框聚焦光圈 */
+  --color-primary-glow: rgba(26, 74, 122, 0.16);
 
   /* ---------- 色板：中性灰阶 ---------- */
-  --color-bg: #f4f6f8;              /* 页面底色 */
+  --color-bg: #f5f7f9;              /* 页面底色 */
   --color-card: #ffffff;            /* 卡片 / 浮层底色 */
-  --color-border: #e4e7eb;          /* 常规分隔线 */
-  --color-border-strong: #c9cfd6;   /* 输入框 / 需要更明确的描边 */
+  --color-border: #e6e9ed;          /* 常规分隔线 */
+  --color-border-strong: #cbd2d9;   /* 输入框 / 需要更明确的描边 */
 
-  /* 文本灰阶（灰调偏冷，衬中性背景与强调蓝） */
-  --color-text: #232b36;
-  --color-text-secondary: #5a6574;
-  --color-text-tertiary: #6c7684;
+  /* 文本灰阶（灰调偏冷，衬中性背景与强调蓝）
+     三级灰在页面底色 #f5f7f9 上的对比度均 ≥ 4.5:1，小字也保持可读 */
+  --color-text: #1c2430;
+  --color-text-secondary: #48525f;
+  --color-text-tertiary: #626b79;
 
   /* ---------- 色板：功能色 ---------- */
   --color-danger: #b3261e;
@@ -34,12 +36,22 @@
   --color-warning: #8a5f00;
   --color-warning-soft: #fbf0dc;
 
+  /* ---------- 封面色相体系 ---------- */
+  /* 同一业务类型共用一个色相，避免列表页出现随机配色噪点 */
+  --hue-theory: 212;    /* 理论课程 · 学术蓝 */
+  --hue-practice: 176;  /* 实训课程 · 青 */
+  --hue-cert: 28;       /* 认证课程 · 赭 */
+
   /* ---------- 字体 ---------- */
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   /* 数字 / 时长等度量数据使用，对齐稳定 */
   --font-num: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Segoe UI Mono',
     Consolas, 'Liberation Mono', Menlo, monospace;
+
+  /* ---------- 字距 ---------- */
+  --tracking-tight: -0.012em;  /* 标题：字面更紧密，显沉稳 */
+  --tracking-wide: 0.08em;     /* 小号标注：拉开字距，避免挤成一团 */
 
   /* ---------- 间距 ---------- */
   --space-1: 4px;
@@ -56,9 +68,9 @@
   --radius-lg: 16px;
 
   /* ---------- 阴影：带偏移与柔和模糊 ---------- */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.09);
-  --shadow-lg: 0 14px 30px rgba(15, 23, 42, 0.13);
+  --shadow-sm: 0 1px 2px rgba(18, 28, 45, 0.04), 0 1px 3px rgba(18, 28, 45, 0.05);
+  --shadow-md: 0 6px 16px rgba(18, 28, 45, 0.08);
+  --shadow-lg: 0 18px 40px rgba(18, 28, 45, 0.12);
 
   /* ---------- 动效 ---------- */
   --dur-fast: 0.15s;

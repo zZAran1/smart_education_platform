@@ -216,7 +216,6 @@ watch(jobId, fetchDetail, { immediate: true })
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
 }
 
 .job-head {
@@ -236,17 +235,16 @@ watch(jobId, fetchDetail, { immediate: true })
   font-size: 22px;
   font-weight: 700;
   line-height: 1.4;
+  letter-spacing: var(--tracking-tight);
 }
 
 .salary {
   flex-shrink: 0;
-  padding: 4px 14px;
-  border-radius: 999px;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-size: 18px;
-  font-weight: 700;
   font-family: var(--font-num);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-primary);
 }
 
 .head-meta {
@@ -264,7 +262,7 @@ watch(jobId, fetchDetail, { immediate: true })
   gap: var(--space-2);
   margin-top: var(--space-4);
   padding-top: var(--space-4);
-  border-top: 1px dashed var(--color-border);
+  border-top: 1px solid var(--color-border);
 }
 
 .head-actions .btn.on {

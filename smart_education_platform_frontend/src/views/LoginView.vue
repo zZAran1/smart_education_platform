@@ -51,7 +51,10 @@ async function submit(): Promise<void> {
     })
     setAuth(token, user_vo)
     showToast(`欢迎回来，${user_vo.nickname || user_vo.username}`, 'success')
-    router.push('/')
+    // 登录后回到被拦截的目标页（仅接受站内路径）
+    const raw = route.query.redirect as string | undefined
+    const redirect = raw && raw.startsWith('/') ? raw : '/'
+    router.replace(redirect)
   } catch {
     // 验证码一次性：登录失败后强制刷新
     await refreshCaptcha().catch(() => {})

@@ -711,9 +711,20 @@ onMounted(load)
 }
 
 .data-table th {
-  background: var(--color-bg);
+  padding: 11px 14px;
+  background: #fafbfc;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-tertiary);
+}
+
+.data-table tbody tr {
+  transition: background var(--dur-fast) ease;
+}
+
+.data-table tbody tr:hover td {
+  background: #fafbfc;
 }
 
 .data-table tr:last-child td {
@@ -733,17 +744,22 @@ onMounted(load)
 
 .status {
   display: inline-flex;
-  padding: 2px 10px;
+  align-items: center;
+  padding: 1px 9px;
+  border: 1px solid transparent;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11.5px;
+  line-height: 18px;
 }
 
 .status.on {
+  border-color: rgba(31, 122, 69, 0.22);
   background: var(--color-success-soft);
   color: var(--color-success);
 }
 
 .status.off {
+  border-color: rgba(179, 38, 30, 0.22);
   background: var(--color-danger-soft);
   color: var(--color-danger);
 }
