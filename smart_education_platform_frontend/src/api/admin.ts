@@ -1,9 +1,15 @@
 import { http } from './request'
 import type {
+  AdminChapterParams,
+  AdminCommentVO,
+  AdminCompanyParams,
   AdminCourseParams,
   AdminJobParams,
+  AdminQuestionVO,
   AiInterview,
+  Company,
   Course,
+  CourseChapter,
   Job,
   JobApplication,
   OrderInfo,
@@ -38,3 +44,25 @@ export const updateApplicationStatus = (id: number, status: number) => http.put<
 /* ---------- 面试管理 ---------- */
 export const getAdminInterviews = (params: Record<string, unknown>) => http.get<Page<AiInterview>>('/admin/interviews', params)
 export const updateInterview = (id: number, status: number) => http.put<void>(`/admin/interviews/${id}?status=${status}`)
+
+/* ---------- 评论/答疑管理 ---------- */
+export const getAdminComments = (params: Record<string, unknown>) =>
+  http.get<Page<AdminCommentVO>>('/admin/comments', params)
+export const hideComment = (id: number) => http.delete<void>(`/admin/comments/${id}`)
+export const getAdminQuestions = (params: Record<string, unknown>) =>
+  http.get<Page<AdminQuestionVO>>('/admin/questions', params)
+export const answerQuestion = (id: number, answer: string) =>
+  http.put<void>(`/admin/questions/${id}/answer`, { answer })
+
+/* ---------- 章节目录管理 ---------- */
+export const getAdminChapters = (courseId: number) => http.get<CourseChapter[]>(`/admin/courses/${courseId}/chapters`)
+export const createChapter = (courseId: number, data: AdminChapterParams) =>
+  http.post<number>(`/admin/courses/${courseId}/chapters`, data)
+export const updateChapter = (id: number, data: AdminChapterParams) => http.put<void>(`/admin/chapters/${id}`, data)
+export const deleteChapter = (id: number) => http.delete<void>(`/admin/chapters/${id}`)
+
+/* ---------- 公司管理 ---------- */
+export const getAdminCompanies = (params: Record<string, unknown>) => http.get<Page<Company>>('/admin/companies', params)
+export const createCompany = (data: AdminCompanyParams) => http.post<number>('/admin/companies', data)
+export const updateCompany = (id: number, data: AdminCompanyParams) => http.put<void>(`/admin/companies/${id}`, data)
+export const deleteCompany = (id: number) => http.delete<void>(`/admin/companies/${id}`)

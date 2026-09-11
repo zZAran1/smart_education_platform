@@ -5,8 +5,10 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.util.Base64;
@@ -15,6 +17,9 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
+    /** HS256 要求的最小密钥长度（字节） */
+    private static final int MIN_SECRET_BYTES = 32;
+
     @Value("${jwt.secret}")
     private String secret;
 
@@ -22,6 +27,28 @@ public class JwtUtil {
     private long expiration;
 
     private volatile SecretKey secretKey;
+
+    /**
+     * 启动期校验密钥，配置缺失或强度不足时直接快速失败。
+     * 否则会在首次登录/鉴权时才抛出异常，表现为"登录失败但查不到原因"。
+     */
+    @PostConstruct
+    public void validateSecret() {
+        if (!StringUtils.hasText(secret)) {
+            throw new IllegalStateException(
+                    "未配置 jwt.secret：请通过环境变量 JWT_SECRET 注入 Base64 编码的密钥（解码后至少 32 字节）");
+        }
+        byte[] keyBytes;
+        try {
+            keyBytes = Base64.getDecoder().decode(secret);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("jwt.secret 不是合法的 Base64 字符串");
+        }
+        if (keyBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "jwt.secret 解码后仅 " + keyBytes.length + " 字节，HS256 要求至少 " + MIN_SECRET_BYTES + " 字节");
+        }
+    }
 
     private SecretKey key() {
         if (secretKey == null) {

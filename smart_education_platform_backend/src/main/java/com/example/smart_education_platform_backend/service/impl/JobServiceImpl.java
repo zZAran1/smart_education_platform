@@ -45,7 +45,8 @@ public class JobServiceImpl extends ServiceImpl<JobMapper, Job> implements JobSe
 
     private static final int STATUS_ON_SHELF = 1;
     private static final String APPLY_LOCK_KEY_PREFIX = "edu:apply:";
-    private static final Duration APPLY_LOCK_TTL = Duration.ofDays(7);
+    /** 防重锁只用于拦截短时间内的重复提交，DB 唯一键才是最终防线；TTL 过长会导致异常时用户被误锁 */
+    private static final Duration APPLY_LOCK_TTL = Duration.ofSeconds(30);
 
     private final JobCategoryMapper jobCategoryMapper;
     private final CompanyMapper companyMapper;
@@ -195,6 +196,10 @@ public class JobServiceImpl extends ServiceImpl<JobMapper, Job> implements JobSe
             jobApplicationMapper.insert(application);
         } catch (DuplicateKeyException e) {
             throw new JobException("请勿重复投递");
+        } catch (RuntimeException e) {
+            // 非重复键异常：立即释放锁，避免用户在 TTL 内被误判为"已投递"而无法重试
+            redisTemplate.delete(lockKey);
+            throw e;
         }
     }
 
@@ -207,6 +212,15 @@ public class JobServiceImpl extends ServiceImpl<JobMapper, Job> implements JobSe
                 .eq(JobApplication::getJob_id, jobId));
         if (application == null) {
             throw new JobException("请先投递该职位");
+        }
+        // 幂等：已申请过面试则直接返回原记录，避免重复插入
+        AiInterview existed = aiInterviewMapper.selectOne(new LambdaQueryWrapper<AiInterview>()
+                .eq(AiInterview::getUser_id, userId)
+                .eq(AiInterview::getJob_id, jobId)
+                .orderByDesc(AiInterview::getId)
+                .last("LIMIT 1"));
+        if (existed != null) {
+            return existed.getId();
         }
         AiInterview interview = new AiInterview();
         interview.setUser_id(userId);

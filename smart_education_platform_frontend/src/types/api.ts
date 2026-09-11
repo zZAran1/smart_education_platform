@@ -217,6 +217,13 @@ export const INTERVIEW_STATUS = { TODO: 0, DOING: 1, DONE: 2 } as const
 /** 答疑状态：0待回复 1已回复 */
 export const QUESTION_STATUS = { PENDING: 0, ANSWERED: 1 } as const
 
+/* ---------- 支付 ---------- */
+/** 支付方式：0 支付宝 1 微信（仅作记录，课程设计不接入真实支付渠道） */
+export const PAY_TYPE_OPTIONS = [
+  { value: 0, label: '支付宝' },
+  { value: 1, label: '微信支付' },
+] as const
+
 /* ---------- 实习就业模块 ---------- */
 export interface JobCategoryVO {
   id: number
@@ -280,6 +287,7 @@ export interface CourseCommentVO {
   avatar: string | null
 }
 
+/** 课程答疑（前台展示，含提问人昵称） */
 export interface CourseQuestionVO {
   id: number
   course_id: number
@@ -292,16 +300,76 @@ export interface CourseQuestionVO {
   nickname: string | null
 }
 
+/* ---------- 后台：章节 / 公司 ---------- */
+/** 课程章节（后台管理） */
+export interface CourseChapter {
+  id: number
+  course_id: number
+  title: string
+  resource_type: number
+  duration: number
+  sort: number
+}
+
+export interface AdminChapterParams {
+  title: string
+  resource_type: number
+  duration?: number
+  sort?: number
+}
+
+/** 公司 */
+export interface Company {
+  id: number
+  name: string
+  logo: string | null
+  industry: string | null
+  scale: string | null
+  region: string | null
+  intro: string | null
+}
+
+export interface AdminCompanyParams {
+  name: string
+  logo?: string | null
+  industry?: string | null
+  scale?: string | null
+  region?: string | null
+  intro?: string | null
+}
+
+/** 后台评论视图（含课程标题与评论人昵称） */
+export interface AdminCommentVO {
+  id: number
+  course_id: number
+  course_title: string | null
+  user_id: number
+  nickname: string | null
+  score: number
+  content: string | null
+  status: number
+  created_at: string
+}
+
+/** 后台答疑视图（含课程标题与提问人昵称） */
+export interface AdminQuestionVO {
+  id: number
+  course_id: number
+  course_title: string | null
+  user_id: number
+  nickname: string | null
+  question: string
+  answer: string | null
+  status: number
+  created_at: string
+}
+
 export interface CourseEnrollVO {
   enrolled: boolean
   order_no: string | null
 }
 
 /* ---------- 用户资料 / 重置密码 ---------- */
-export interface ResetCodeVO {
-  code: string
-}
-
 export interface ResetPasswordParams {
   target: string
   code: string

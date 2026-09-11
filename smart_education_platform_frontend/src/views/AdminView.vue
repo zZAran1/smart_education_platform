@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import {
   getAdminUsers,
   updateUserStatus,
@@ -17,32 +17,65 @@ import {
   updateApplicationStatus,
   getAdminInterviews,
   updateInterview,
+  getAdminComments,
+  hideComment,
+  getAdminQuestions,
+  answerQuestion,
+  getAdminChapters,
+  createChapter,
+  updateChapter,
+  deleteChapter,
+  getAdminCompanies,
+  createCompany,
+  updateCompany,
+  deleteCompany,
 } from '@/api/admin'
 import { showToast } from '@/composables/toast'
 import {
   APPLICATION_STATUS_MAP,
   COURSE_TYPE_MAP,
   ORDER_STATUS_MAP,
+  RESOURCE_TYPE_MAP,
   ROLE_MAP,
   USER_STATUS,
+  formatDuration,
   formatSalary,
   toNumber,
+  type AdminChapterParams,
+  type AdminCommentVO,
+  type AdminCompanyParams,
   type AdminCourseParams,
   type AdminJobParams,
+  type AdminQuestionVO,
   type AiInterview,
+  type Company,
   type Course,
+  type CourseChapter,
   type Job,
   type JobApplication,
   type OrderInfo,
   type UserVO,
 } from '@/types/api'
 
-type Tab = 'users' | 'courses' | 'jobs' | 'orders' | 'applications' | 'interviews'
+type Tab =
+  | 'users'
+  | 'courses'
+  | 'jobs'
+  | 'orders'
+  | 'applications'
+  | 'interviews'
+  | 'companies'
+  | 'comments'
+  | 'questions'
 
 const PAGE_SIZE = 10
 
 const activeTab = ref<Tab>('users')
 const loading = ref(false)
+/** 表单提交中标记：防止重复点击写入重复数据 */
+const saving = ref(false)
+/** 请求序号：丢弃过期响应，避免快速切换 tab 时旧数据覆盖新数据 */
+let loadSeq = 0
 
 const users = ref<UserVO[]>([])
 const courses = ref<Course[]>([])
@@ -50,9 +83,52 @@ const jobs = ref<Job[]>([])
 const orders = ref<OrderInfo[]>([])
 const applications = ref<JobApplication[]>([])
 const interviews = ref<AiInterview[]>([])
+const companies = ref<Company[]>([])
+const adminComments = ref<AdminCommentVO[]>([])
+const adminQuestions = ref<AdminQuestionVO[]>([])
 
 const total = ref(0)
 const pageNum = ref(1)
+
+/** 当前 tab 的列表条数（用于删除后判断是否需要回收页码） */
+const currentListLength = computed(() => {
+  switch (activeTab.value) {
+    case 'users': return users.value.length
+    case 'courses': return courses.value.length
+    case 'jobs': return jobs.value.length
+    case 'orders': return orders.value.length
+    case 'applications': return applications.value.length
+    case 'interviews': return interviews.value.length
+    case 'companies': return companies.value.length
+    case 'comments': return adminComments.value.length
+    default: return adminQuestions.value.length
+  }
+})
+
+/** 公司表单 */
+const showCompanyForm = ref(false)
+const editingCompanyId = ref<number | null>(null)
+const companyForm = reactive<AdminCompanyParams>({
+  name: '',
+  logo: '',
+  industry: '',
+  scale: '',
+  region: '',
+  intro: '',
+})
+
+/** 课程章节目录面板 */
+const chapterPanel = reactive({ visible: false, courseId: 0, courseTitle: '' })
+const chapters = ref<CourseChapter[]>([])
+const chapterForm = reactive<AdminChapterParams>({ title: '', resource_type: 0, duration: 0, sort: 0 })
+const editingChapterId = ref<number | null>(null)
+
+/** 答疑回复 */
+const answeringId = ref<number | null>(null)
+const answerText = ref('')
+
+/** 职位表单的公司下拉选项 */
+const companyOptions = ref<Company[]>([])
 
 /* ---------- 课程表单 ---------- */
 const showCourseForm = ref(false)
@@ -92,62 +168,103 @@ const tabs: { key: Tab; label: string }[] = [
   { key: 'orders', label: '订单管理' },
   { key: 'applications', label: '申请管理' },
   { key: 'interviews', label: '面试管理' },
+  { key: 'companies', label: '公司管理' },
+  { key: 'comments', label: '评论管理' },
+  { key: 'questions', label: '答疑管理' },
 ]
 
 async function load(): Promise<void> {
+  const seq = ++loadSeq
   loading.value = true
   try {
     const params = { page_num: pageNum.value, page_size: PAGE_SIZE }
     switch (activeTab.value) {
       case 'users': {
         const data = await getAdminUsers(params)
-        users.value = data.records || []
-        total.value = data.total || 0
+        applyResult(seq, data.records || [], data.total || 0, (list) => { users.value = list })
         break
       }
       case 'courses': {
         const data = await getAdminCourses(params)
-        courses.value = data.records || []
-        total.value = data.total || 0
+        applyResult(seq, data.records || [], data.total || 0, (list) => { courses.value = list })
         break
       }
       case 'jobs': {
         const data = await getAdminJobs(params)
-        jobs.value = data.records || []
-        total.value = data.total || 0
+        applyResult(seq, data.records || [], data.total || 0, (list) => { jobs.value = list })
         break
       }
       case 'orders': {
         const data = await getAdminOrders(params)
-        orders.value = data.records || []
-        total.value = data.total || 0
+        applyResult(seq, data.records || [], data.total || 0, (list) => { orders.value = list })
         break
       }
       case 'applications': {
         const data = await getAdminApplications(params)
-        applications.value = data.records || []
-        total.value = data.total || 0
+        applyResult(seq, data.records || [], data.total || 0, (list) => { applications.value = list })
         break
       }
       case 'interviews': {
         const data = await getAdminInterviews(params)
-        interviews.value = data.records || []
-        total.value = data.total || 0
+        applyResult(seq, data.records || [], data.total || 0, (list) => { interviews.value = list })
+        break
+      }
+      case 'companies': {
+        const data = await getAdminCompanies(params)
+        applyResult(seq, data.records || [], data.total || 0, (list) => { companies.value = list })
+        break
+      }
+      case 'comments': {
+        const data = await getAdminComments(params)
+        applyResult(seq, data.records || [], data.total || 0, (list) => { adminComments.value = list })
+        break
+      }
+      case 'questions': {
+        const data = await getAdminQuestions(params)
+        applyResult(seq, data.records || [], data.total || 0, (list) => { adminQuestions.value = list })
         break
       }
     }
   } catch {
     /* 已提示 */
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
+}
+
+/**
+ * 统一的响应落地处理：
+ * ① 丢弃过期响应（已切换 tab 或发起了更新请求），避免旧数据覆盖新数据；
+ * ② 当前页被删空时自动回退一页，避免出现只有表头的空表格。
+ */
+function applyResult<T>(seq: number, records: T[], count: number, assign: (list: T[]) => void): void {
+  if (seq !== loadSeq) return
+  if (records.length === 0 && pageNum.value > 1) {
+    pageNum.value -= 1
+    load()
+    return
+  }
+  total.value = count
+  assign(records)
+}
+
+/** 删除/隐藏操作后的刷新：若当前页只剩这一条则回收页码 */
+function refreshAfterRemove(): void {
+  if (currentListLength.value <= 1 && pageNum.value > 1) {
+    pageNum.value -= 1
+  }
+  load()
 }
 
 function switchTab(tab: Tab): void {
   activeTab.value = tab
   pageNum.value = 1
+  // 清理上一个 tab 的临时状态，避免跨 tab 残留（表单、章节面板、答疑展开态）
   showCourseForm.value = false
   showJobForm.value = false
+  showCompanyForm.value = false
+  closeChapters()
+  cancelAnswer()
   load()
 }
 
@@ -206,6 +323,8 @@ async function submitCourse(): Promise<void> {
     showToast('请输入课程名称', 'error')
     return
   }
+  if (saving.value) return
+  saving.value = true
   try {
     if (editingCourseId.value) {
       await updateCourse(editingCourseId.value, { ...courseForm, title: courseForm.title.trim() })
@@ -218,6 +337,8 @@ async function submitCourse(): Promise<void> {
     load()
   } catch {
     /* 已提示 */
+  } finally {
+    saving.value = false
   }
 }
 
@@ -237,6 +358,7 @@ function openCreateJob(): void {
   editingJobId.value = null
   Object.assign(jobForm, { title: '', city: '', address: '', salary_min: null, salary_max: null, headcount: 1, company_id: 0, category_id: null, expire_time: '', description: '', requirement: '' })
   showJobForm.value = true
+  loadCompanyOptions()
 }
 
 function openEditJob(job: Job): void {
@@ -255,18 +377,32 @@ function openEditJob(job: Job): void {
     requirement: job.requirement || '',
   })
   showJobForm.value = true
+  loadCompanyOptions()
+}
+
+/** 加载公司下拉选项（供职位表单选择所属公司） */
+async function loadCompanyOptions(): Promise<void> {
+  try {
+    const data = await getAdminCompanies({ page_num: 1, page_size: 200 })
+    companyOptions.value = data.records || []
+  } catch {
+    /* 已提示 */
+  }
 }
 
 async function submitJob(): Promise<void> {
   if (!jobForm.title.trim() || !jobForm.company_id) {
-    showToast('请填写职位名称与公司ID', 'error')
+    showToast('请填写职位名称并选择所属公司', 'error')
     return
   }
+  // datetime-local 的值形如 2026-01-01T12:00，补秒后即为后端 LocalDateTime 要求的 ISO-8601
   const payload: AdminJobParams = {
     ...jobForm,
     title: jobForm.title.trim(),
-    expire_time: jobForm.expire_time ? jobForm.expire_time.replace('T', ' ') + ':00' : null,
+    expire_time: jobForm.expire_time ? `${jobForm.expire_time}:00` : null,
   }
+  if (saving.value) return
+  saving.value = true
   try {
     if (editingJobId.value) {
       await updateJob(editingJobId.value, payload)
@@ -279,6 +415,8 @@ async function submitJob(): Promise<void> {
     load()
   } catch {
     /* 已提示 */
+  } finally {
+    saving.value = false
   }
 }
 
@@ -319,6 +457,174 @@ function fmtDate(v?: string | null): string {
   return v ? v.slice(0, 10) : '—'
 }
 
+/* ---------- 章节目录 ---------- */
+async function openChapters(course: Course): Promise<void> {
+  chapterPanel.courseId = course.id
+  chapterPanel.courseTitle = course.title
+  chapterPanel.visible = true
+  resetChapterForm()
+  await loadChapters()
+}
+
+function closeChapters(): void {
+  chapterPanel.visible = false
+  chapters.value = []
+  resetChapterForm()
+}
+
+async function loadChapters(): Promise<void> {
+  try {
+    chapters.value = await getAdminChapters(chapterPanel.courseId)
+  } catch {
+    /* 已提示 */
+  }
+}
+
+function resetChapterForm(): void {
+  editingChapterId.value = null
+  Object.assign(chapterForm, { title: '', resource_type: 0, duration: 0, sort: 0 })
+}
+
+function editChapter(ch: CourseChapter): void {
+  editingChapterId.value = ch.id
+  Object.assign(chapterForm, {
+    title: ch.title,
+    resource_type: ch.resource_type,
+    duration: ch.duration,
+    sort: ch.sort,
+  })
+}
+
+async function submitChapter(): Promise<void> {
+  if (!chapterForm.title.trim()) {
+    showToast('请填写资源标题', 'error')
+    return
+  }
+  if (saving.value) return
+  saving.value = true
+  try {
+    const payload = { ...chapterForm, title: chapterForm.title.trim() }
+    if (editingChapterId.value) {
+      await updateChapter(editingChapterId.value, payload)
+    } else {
+      await createChapter(chapterPanel.courseId, payload)
+    }
+    showToast('保存成功', 'success')
+    resetChapterForm()
+    await loadChapters()
+    load()
+  } catch {
+    /* 已提示 */
+  } finally {
+    saving.value = false
+  }
+}
+
+async function removeChapter(ch: CourseChapter): Promise<void> {
+  try {
+    await deleteChapter(ch.id)
+    showToast('删除成功', 'success')
+    await loadChapters()
+    load()
+  } catch {
+    /* 已提示 */
+  }
+}
+
+/* ---------- 公司 ---------- */
+function openCreateCompany(): void {
+  editingCompanyId.value = null
+  Object.assign(companyForm, { name: '', logo: '', industry: '', scale: '', region: '', intro: '' })
+  showCompanyForm.value = true
+}
+
+function openEditCompany(c: Company): void {
+  editingCompanyId.value = c.id
+  Object.assign(companyForm, {
+    name: c.name,
+    logo: c.logo || '',
+    industry: c.industry || '',
+    scale: c.scale || '',
+    region: c.region || '',
+    intro: c.intro || '',
+  })
+  showCompanyForm.value = true
+}
+
+async function submitCompany(): Promise<void> {
+  if (!companyForm.name.trim()) {
+    showToast('请填写公司名称', 'error')
+    return
+  }
+  if (saving.value) return
+  saving.value = true
+  try {
+    const payload = { ...companyForm, name: companyForm.name.trim() }
+    if (editingCompanyId.value) {
+      await updateCompany(editingCompanyId.value, payload)
+    } else {
+      await createCompany(payload)
+    }
+    showToast('保存成功', 'success')
+    showCompanyForm.value = false
+    load()
+  } catch {
+    /* 已提示 */
+  } finally {
+    saving.value = false
+  }
+}
+
+async function removeCompany(c: Company): Promise<void> {
+  try {
+    await deleteCompany(c.id)
+    showToast('删除成功', 'success')
+    refreshAfterRemove()
+  } catch {
+    /* 已提示 */
+  }
+}
+
+/* ---------- 评论 / 答疑 ---------- */
+async function onHideComment(c: AdminCommentVO): Promise<void> {
+  try {
+    await hideComment(c.id)
+    showToast('评论已隐藏', 'success')
+    refreshAfterRemove()
+  } catch {
+    /* 已提示 */
+  }
+}
+
+function startAnswer(q: AdminQuestionVO): void {
+  answeringId.value = q.id
+  answerText.value = q.answer || ''
+}
+
+function cancelAnswer(): void {
+  answeringId.value = null
+  answerText.value = ''
+}
+
+async function submitAnswer(q: AdminQuestionVO): Promise<void> {
+  if (!answerText.value.trim()) {
+    showToast('请输入回复内容', 'error')
+    return
+  }
+  if (saving.value) return
+  saving.value = true
+  try {
+    await answerQuestion(q.id, answerText.value.trim())
+    showToast('回复成功', 'success')
+    cancelAnswer()
+    load()
+  } catch {
+    /* 已提示 */
+  } finally {
+    saving.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -349,6 +655,9 @@ onMounted(load)
       </template>
       <template v-else-if="activeTab === 'jobs'">
         <button class="btn btn-primary btn-sm" type="button" @click="openCreateJob">新增职位</button>
+      </template>
+      <template v-else-if="activeTab === 'companies'">
+        <button class="btn btn-primary btn-sm" type="button" @click="openCreateCompany">新增公司</button>
       </template>
     </div>
 
@@ -403,7 +712,7 @@ onMounted(load)
       </div>
       <div class="form-actions">
         <button class="btn" type="button" @click="showCourseForm = false">取消</button>
-        <button class="btn btn-primary" type="button" @click="submitCourse">保存</button>
+        <button class="btn btn-primary" type="button" :disabled="saving" @click="submitCourse">保存</button>
       </div>
     </div>
 
@@ -416,8 +725,11 @@ onMounted(load)
           <input v-model.trim="jobForm.title" class="form-input" maxlength="100" />
         </div>
         <div class="form-item">
-          <label>公司ID</label>
-          <input v-model.number="jobForm.company_id" type="number" class="form-input" min="1" />
+          <label>所属公司</label>
+          <select v-model.number="jobForm.company_id" class="form-input">
+            <option :value="0" disabled>请选择公司</option>
+            <option v-for="co in companyOptions" :key="co.id" :value="co.id">{{ co.name }}</option>
+          </select>
         </div>
         <div class="form-item">
           <label>工作城市</label>
@@ -454,8 +766,82 @@ onMounted(load)
       </div>
       <div class="form-actions">
         <button class="btn" type="button" @click="showJobForm = false">取消</button>
-        <button class="btn btn-primary" type="button" @click="submitJob">保存</button>
+        <button class="btn btn-primary" type="button" :disabled="saving" @click="submitJob">保存</button>
       </div>
+    </div>
+
+    <!-- 公司表单 -->
+    <div v-if="activeTab === 'companies' && showCompanyForm" class="form-panel">
+      <h2 class="form-title">{{ editingCompanyId ? '编辑公司' : '新增公司' }}</h2>
+      <div class="form-grid">
+        <div class="form-item">
+          <label>公司名称</label>
+          <input v-model.trim="companyForm.name" class="form-input" maxlength="100" />
+        </div>
+        <div class="form-item">
+          <label>所属行业</label>
+          <input v-model.trim="companyForm.industry" class="form-input" maxlength="50" placeholder="如 人工智能" />
+        </div>
+        <div class="form-item">
+          <label>公司规模</label>
+          <input v-model.trim="companyForm.scale" class="form-input" maxlength="50" placeholder="如 500-999人" />
+        </div>
+        <div class="form-item">
+          <label>所在地区</label>
+          <input v-model.trim="companyForm.region" class="form-input" maxlength="50" placeholder="如 深圳" />
+        </div>
+        <div class="form-item full">
+          <label>LOGO 地址</label>
+          <input v-model.trim="companyForm.logo" class="form-input" maxlength="255" placeholder="选填，/uploads/ 前缀" />
+        </div>
+        <div class="form-item full">
+          <label>公司简介</label>
+          <textarea v-model="companyForm.intro" class="form-input textarea" maxlength="1000" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="button" @click="showCompanyForm = false">取消</button>
+        <button class="btn btn-primary" type="button" :disabled="saving" @click="submitCompany">保存</button>
+      </div>
+    </div>
+
+    <!-- 课程章节目录面板 -->
+    <div v-if="chapterPanel.visible" class="form-panel">
+      <div class="panel-head">
+        <h2 class="form-title">课程目录 · {{ chapterPanel.courseTitle }}</h2>
+        <button class="btn btn-sm" type="button" @click="closeChapters">关闭</button>
+      </div>
+
+      <div class="chapter-form">
+        <input
+          v-model.trim="chapterForm.title"
+          class="form-input"
+          placeholder="资源标题，如 第1讲 课程概述"
+          maxlength="100"
+        />
+        <select v-model.number="chapterForm.resource_type" class="form-input chapter-select" aria-label="资源类型">
+          <option :value="0">课件</option>
+          <option :value="1">视频</option>
+          <option :value="2">实验</option>
+        </select>
+        <input v-model.number="chapterForm.duration" type="number" class="form-input chapter-num" min="0" placeholder="时长(秒)" />
+        <input v-model.number="chapterForm.sort" type="number" class="form-input chapter-num" min="0" placeholder="排序" />
+        <button class="btn btn-primary btn-sm" type="button" :disabled="saving" @click="submitChapter">
+          {{ editingChapterId ? '保存修改' : '添加' }}
+        </button>
+        <button v-if="editingChapterId" class="btn btn-sm" type="button" @click="resetChapterForm">取消编辑</button>
+      </div>
+
+      <ul v-if="chapters.length" class="chapter-manage-list">
+        <li v-for="ch in chapters" :key="ch.id" class="chapter-manage-item">
+          <span class="chapter-manage-type">{{ RESOURCE_TYPE_MAP.get(ch.resource_type) || '资源' }}</span>
+          <span class="chapter-manage-title" :title="ch.title">{{ ch.title }}</span>
+          <span class="chapter-manage-duration">{{ formatDuration(ch.duration) }}</span>
+          <button class="link-btn" type="button" @click="editChapter(ch)">编辑</button>
+          <button class="link-btn danger" type="button" @click="removeChapter(ch)">删除</button>
+        </li>
+      </ul>
+      <p v-else class="chapter-empty">该课程暂无目录，添加第一条资源吧</p>
     </div>
 
     <div class="table-wrap">
@@ -479,8 +865,17 @@ onMounted(load)
             <template v-else-if="activeTab === 'applications'">
               <th>ID</th><th>用户</th><th>职位</th><th>状态</th><th>投递时间</th><th>操作</th>
             </template>
-            <template v-else>
+            <template v-else-if="activeTab === 'interviews'">
               <th>ID</th><th>用户</th><th>职位</th><th>状态</th><th>创建时间</th><th>操作</th>
+            </template>
+            <template v-else-if="activeTab === 'companies'">
+              <th>ID</th><th>公司名称</th><th>行业</th><th>规模</th><th>地区</th><th>操作</th>
+            </template>
+            <template v-else-if="activeTab === 'comments'">
+              <th>ID</th><th>课程</th><th>学员</th><th>评分</th><th>内容</th><th>状态</th><th>操作</th>
+            </template>
+            <template v-else>
+              <th>ID</th><th>课程</th><th>学员</th><th>问题</th><th>状态</th><th>操作</th>
             </template>
           </tr>
         </thead>
@@ -508,6 +903,7 @@ onMounted(load)
               <td>{{ c.student_count }}</td>
               <td><span class="status" :class="c.status === 1 ? 'on' : 'off'">{{ c.status === 1 ? '上架' : '下架' }}</span></td>
               <td>
+                <button class="link-btn" type="button" @click="openChapters(c)">目录</button>
                 <button class="link-btn" type="button" @click="openEditCourse(c)">编辑</button>
                 <button class="link-btn" type="button" @click="onToggleCourse(c)">{{ c.status === 1 ? '下架' : '上架' }}</button>
               </td>
@@ -564,7 +960,7 @@ onMounted(load)
           </template>
 
           <!-- 面试 -->
-          <template v-else>
+          <template v-else-if="activeTab === 'interviews'">
             <tr v-for="it in interviews" :key="it.id">
               <td>{{ it.id }}</td>
               <td>{{ it.user_id }}</td>
@@ -576,6 +972,65 @@ onMounted(load)
                 <span v-else>—</span>
               </td>
             </tr>
+          </template>
+
+          <!-- 公司 -->
+          <template v-else-if="activeTab === 'companies'">
+            <tr v-for="co in companies" :key="co.id">
+              <td>{{ co.id }}</td>
+              <td class="cell-title">{{ co.name }}</td>
+              <td>{{ co.industry || '—' }}</td>
+              <td>{{ co.scale || '—' }}</td>
+              <td>{{ co.region || '—' }}</td>
+              <td class="actions-cell">
+                <button class="link-btn" type="button" @click="openEditCompany(co)">编辑</button>
+                <button class="link-btn danger" type="button" @click="removeCompany(co)">删除</button>
+              </td>
+            </tr>
+          </template>
+
+          <!-- 评论 -->
+          <template v-else-if="activeTab === 'comments'">
+            <tr v-for="c in adminComments" :key="c.id">
+              <td>{{ c.id }}</td>
+              <td class="cell-title">{{ c.course_title || `课程#${c.course_id}` }}</td>
+              <td>{{ c.nickname || `用户#${c.user_id}` }}</td>
+              <td>{{ c.score }}</td>
+              <td class="cell-title">{{ c.content || '—' }}</td>
+              <td>{{ c.status === 1 ? '正常' : '已隐藏' }}</td>
+              <td>
+                <button v-if="c.status === 1" class="link-btn danger" type="button" @click="onHideComment(c)">隐藏</button>
+                <span v-else>—</span>
+              </td>
+            </tr>
+          </template>
+
+          <!-- 答疑 -->
+          <template v-else>
+            <template v-for="q in adminQuestions" :key="q.id">
+              <tr>
+                <td>{{ q.id }}</td>
+                <td class="cell-title">{{ q.course_title || `课程#${q.course_id}` }}</td>
+                <td>{{ q.nickname || `用户#${q.user_id}` }}</td>
+                <td class="cell-title">{{ q.question }}</td>
+                <td>{{ q.status === 1 ? '已回复' : '待回复' }}</td>
+                <td>
+                  <button v-if="answeringId !== q.id" class="link-btn" type="button" @click="startAnswer(q)">
+                    {{ q.status === 1 ? '修改回复' : '回复' }}
+                  </button>
+                  <span v-else>—</span>
+                </td>
+              </tr>
+              <tr v-if="answeringId === q.id">
+                <td colspan="6" class="answer-row">
+                  <textarea v-model="answerText" class="form-input textarea" placeholder="输入回复内容…" maxlength="1000" />
+                  <div class="form-actions">
+                    <button class="btn btn-sm" type="button" @click="cancelAnswer">取消</button>
+                    <button class="btn btn-primary btn-sm" type="button" :disabled="saving" @click="submitAnswer(q)">提交回复</button>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </template>
         </tbody>
       </table>
@@ -780,6 +1235,97 @@ onMounted(load)
 
 .actions-cell {
   white-space: nowrap;
+}
+
+/* ---------- 章节目录面板 ---------- */
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.panel-head .form-title {
+  margin-bottom: 0;
+}
+
+.chapter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.chapter-form .form-input {
+  flex: 1;
+  min-width: 160px;
+  height: 38px;
+}
+
+.chapter-select {
+  flex: 0 0 100px;
+}
+
+.chapter-num {
+  flex: 0 0 110px;
+}
+
+.chapter-manage-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-border);
+}
+
+.chapter-manage-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--color-border);
+  font-size: 13px;
+}
+
+.chapter-manage-type {
+  flex-shrink: 0;
+  min-width: 42px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  text-align: center;
+}
+
+.chapter-manage-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapter-manage-duration {
+  flex-shrink: 0;
+  font-family: var(--font-num);
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.chapter-empty {
+  padding: var(--space-5);
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+/* ---------- 答疑回复展开行 ---------- */
+.answer-row {
+  padding: var(--space-4) !important;
+  background: var(--color-bg);
+}
+
+.answer-row .textarea {
+  margin-bottom: var(--space-3);
 }
 
 .pager {

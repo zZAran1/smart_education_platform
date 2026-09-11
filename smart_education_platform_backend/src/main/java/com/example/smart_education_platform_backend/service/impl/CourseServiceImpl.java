@@ -295,17 +295,13 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         comment.setStatus(COMMENT_STATUS_NORMAL);
         courseCommentMapper.insert(comment);
 
-        // 评论提交后实时重算平均分与评价人次
-        Course course = getById(courseId);
-        int newCount = (course.getRating_count() == null ? 0 : course.getRating_count()) + 1;
-        BigDecimal oldScore = course.getScore() == null ? BigDecimal.ZERO : course.getScore();
-        BigDecimal newScore = oldScore
-                .multiply(BigDecimal.valueOf(newCount - 1))
-                .add(BigDecimal.valueOf(dto.getScore()))
-                .divide(BigDecimal.valueOf(newCount), 1, RoundingMode.HALF_UP);
+        // 评论提交后实时重算平均分与评价人次。
+        // 使用单条 SQL 原子更新，避免并发评论时「读-改-写」造成统计丢更新
+        // （同一 UPDATE 内计算 score 时 rating_count 仍是更新前的值）
+        int newScore = dto.getScore();
         lambdaUpdate().eq(Course::getId, courseId)
-                .set(Course::getScore, newScore)
-                .set(Course::getRating_count, newCount)
+                .setSql("score = ROUND((score * rating_count + " + newScore + ") / (rating_count + 1), 1)")
+                .setSql("rating_count = rating_count + 1")
                 .update();
     }
 
@@ -360,15 +356,21 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
             studyRecordMapper.insert(record);
         }
 
-        Long finishCount = studyRecordMapper.selectCount(new LambdaQueryWrapper<StudyRecord>()
-                .eq(StudyRecord::getUser_id, userId)
-                .eq(StudyRecord::getCourse_id, courseId));
-        Long totalCount = courseChapterMapper.selectCount(new LambdaQueryWrapper<CourseChapter>()
-                .eq(CourseChapter::getCourse_id, courseId));
-        int total = totalCount == null ? 0 : totalCount.intValue();
+        // 只统计「现存章节」对应的学习记录，避免章节被删除后残留记录导致进度超过 100%
+        List<Long> chapterIds = courseChapterMapper.selectList(new LambdaQueryWrapper<CourseChapter>()
+                        .eq(CourseChapter::getCourse_id, courseId))
+                .stream()
+                .map(CourseChapter::getId)
+                .toList();
+        int total = chapterIds.size();
+        long finishCount = chapterIds.isEmpty() ? 0L
+                : studyRecordMapper.selectCount(new LambdaQueryWrapper<StudyRecord>()
+                        .eq(StudyRecord::getUser_id, userId)
+                        .eq(StudyRecord::getCourse_id, courseId)
+                        .in(StudyRecord::getChapter_id, chapterIds));
         int progress = total == 0 ? 0 : (int) Math.round((double) finishCount / total * 100);
 
-        enrollment.setFinish_count(finishCount.intValue());
+        enrollment.setFinish_count((int) finishCount);
         enrollment.setTotal_count(total);
         enrollment.setProgress(progress);
         courseEnrollmentMapper.updateById(enrollment);

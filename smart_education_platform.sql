@@ -6,11 +6,11 @@
 --       审计字段 created_at / updated_at；金额 DECIMAL(10,2)
 -- =============================================================
 
-CREATE DATABASE IF NOT EXISTS `edu_platform`
+CREATE DATABASE IF NOT EXISTS `smart_education_platform`
   DEFAULT CHARACTER SET utf8mb4
   COLLATE utf8mb4_general_ci;
 
-USE `edu_platform`;
+USE `smart_education_platform`;
 
 -- =============================================================
 -- 1. 用户模块
@@ -302,7 +302,9 @@ CREATE TABLE `order_info` (
   `amount`     DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '订单金额',
   `pay_type`   TINYINT       DEFAULT NULL COMMENT '支付方式 0支付宝 1微信',
   `status`     TINYINT       NOT NULL DEFAULT 0 COMMENT '0待支付 1已支付 2已退款 3已取消',
+  `trade_no`   VARCHAR(64)   DEFAULT NULL COMMENT '第三方支付流水号',
   `pay_time`   DATETIME      DEFAULT NULL COMMENT '支付时间',
+  `notify_time` DATETIME     DEFAULT NULL COMMENT '支付回调时间',
   `deleted`    TINYINT       NOT NULL DEFAULT 0 COMMENT '逻辑删除 0否 1是',
   `created_at` DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -512,3 +514,4 @@ INSERT INTO `users` (`username`, `password`, `nickname`, `real_name`, `email`, `
 ('admin',     '$2a$10$gvBTaAaY95/nOWKo8F4qv.SOgpsXL1rmDfqDv9jCUf5KIrk25xd26', '系统管理员', '管理员', 'admin@edu.com',     '13800000000', 2, 1),
 ('student01', '$2a$10$gvBTaAaY95/nOWKo8F4qv.SOgpsXL1rmDfqDv9jCUf5KIrk25xd26', '小明同学',   '李明',   'student01@edu.com', '13800000001', 0, 1),
 ('student02', '$2a$10$gvBTaAaY95/nOWKo8F4qv.SOgpsXL1rmDfqDv9jCUf5KIrk25xd26', '小美',       '王美',   'student02@edu.com', '13800000002', 0, 1);
+

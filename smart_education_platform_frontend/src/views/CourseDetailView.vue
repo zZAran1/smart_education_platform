@@ -14,9 +14,11 @@ import {
 } from '@/api/course'
 import { isLoggedIn } from '@/stores/auth'
 import { showToast } from '@/composables/toast'
+import { payOrder } from '@/api/order'
 import {
   COURSE_LEVEL_MAP,
   COURSE_TYPE_MAP,
+  PAY_TYPE_OPTIONS,
   RESOURCE_TYPE_MAP,
   formatDuration,
   toNumber,
@@ -39,10 +41,20 @@ const commentPage = ref(1)
 const loading = ref(true)
 const collectLoading = ref(false)
 const enrollLoading = ref(false)
+
+/** 支付弹层：收费课程下单后唤起 */
+const payDialog = reactive({
+  visible: false,
+  orderNo: '',
+  amount: 0,
+  payType: 0,
+  loading: false,
+})
 const activeTab = ref<'intro' | 'chapters' | 'comments' | 'questions'>('intro')
 
 const commentForm = reactive({ score: 5, content: '' })
 const commentSubmitting = ref(false)
+const commentsLoading = ref(false)
 const questionText = ref('')
 const questionSubmitting = ref(false)
 const commentsLoaded = ref(false)
@@ -135,6 +147,20 @@ async function loadQuestions(): Promise<void> {
   questionsLoaded.value = true
 }
 
+/** 加载更多评论：失败时回滚页码，避免该页数据永久丢失 */
+async function loadMoreComments(): Promise<void> {
+  if (commentsLoading.value) return
+  commentsLoading.value = true
+  commentPage.value += 1
+  try {
+    await loadComments()
+  } catch {
+    commentPage.value -= 1
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
 function onTabChange(tab: 'intro' | 'chapters' | 'comments' | 'questions'): void {
   activeTab.value = tab
   if (tab === 'comments' && !commentsLoaded.value) {
@@ -174,13 +200,42 @@ async function onEnroll(): Promise<void> {
     if (result.enrolled) {
       showToast('报名成功，开始学习吧', 'success')
       await fetchDetail()
-    } else {
-      showToast(`已生成待支付订单：${result.order_no}`, 'info')
+    } else if (result.order_no) {
+      // 收费课程：唤起支付弹层，由用户选择支付方式后完成支付
+      openPayDialog(result.order_no)
     }
   } catch {
     /* 已提示 */
   } finally {
     enrollLoading.value = false
+  }
+}
+
+function openPayDialog(orderNo: string): void {
+  payDialog.orderNo = orderNo
+  payDialog.amount = toNumber(course.value?.price)
+  payDialog.payType = 0
+  payDialog.visible = true
+}
+
+function closePayDialog(): void {
+  if (payDialog.loading) return
+  payDialog.visible = false
+}
+
+async function confirmPay(): Promise<void> {
+  if (payDialog.loading) return
+  payDialog.loading = true
+  try {
+    // 课程设计简化：点击支付即视为支付成功（不接入真实支付渠道）
+    await payOrder(payDialog.orderNo, payDialog.payType)
+    showToast('支付成功，课程已开通', 'success')
+    payDialog.visible = false
+    await fetchDetail()
+  } catch {
+    /* 已提示 */
+  } finally {
+    payDialog.loading = false
   }
 }
 
@@ -435,7 +490,9 @@ watch(courseId, fetchAll, { immediate: true })
             </li>
           </ul>
           <div v-if="comments.length < commentTotal" class="load-more">
-            <button class="btn" type="button" @click="commentPage += 1; loadComments()">加载更多</button>
+            <button class="btn" type="button" :disabled="commentsLoading" @click="loadMoreComments">
+              {{ commentsLoading ? '加载中…' : '加载更多' }}
+            </button>
           </div>
         </section>
 
@@ -477,6 +534,41 @@ watch(courseId, fetchAll, { immediate: true })
         </section>
       </Transition>
     </template>
+
+    <!-- 支付弹层：收费课程下单后唤起 -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="payDialog.visible" class="pay-mask" @click.self="closePayDialog">
+          <div class="pay-dialog" role="dialog" aria-modal="true" aria-label="课程支付">
+            <h2 class="pay-title">确认支付</h2>
+            <p class="pay-amount">¥{{ payDialog.amount.toFixed(2) }}</p>
+            <p class="pay-order">订单号 {{ payDialog.orderNo }}</p>
+
+            <p class="pay-label">选择支付方式</p>
+            <div class="pay-types" role="radiogroup" aria-label="支付方式">
+              <button
+                v-for="opt in PAY_TYPE_OPTIONS"
+                :key="opt.value"
+                type="button"
+                class="pay-type"
+                :class="{ active: payDialog.payType === opt.value }"
+                @click="payDialog.payType = opt.value"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+
+            <div class="pay-actions">
+              <button class="btn" type="button" :disabled="payDialog.loading" @click="closePayDialog">取消</button>
+              <button class="btn btn-primary" type="button" :disabled="payDialog.loading" @click="confirmPay">
+                {{ payDialog.loading ? '支付中…' : '确认支付' }}
+              </button>
+            </div>
+            <p class="pay-hint">点击确认支付即完成支付</p>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -603,6 +695,20 @@ watch(courseId, fetchAll, { immediate: true })
 .a-row { margin-top: var(--space-3); padding: var(--space-3); background: var(--color-bg); border-radius: var(--radius-md); }
 .a-text { flex: 1; font-size: 14px; color: var(--color-text-secondary); line-height: 1.7; }
 .a-pending { margin-top: var(--space-3); font-size: 12px; color: var(--color-warning); }
+
+/* ---------- 支付弹层 ---------- */
+.pay-mask { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: rgba(18, 28, 45, 0.45); }
+.pay-dialog { width: min(400px, 100%); padding: var(--space-6); background: var(--color-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.pay-title { font-size: 16px; font-weight: 600; }
+.pay-amount { margin-top: var(--space-4); font-family: var(--font-num); font-size: 32px; font-weight: 700; letter-spacing: -0.02em; color: var(--color-primary); }
+.pay-order { margin-top: 4px; font-family: var(--font-num); font-size: 12px; color: var(--color-text-tertiary); }
+.pay-label { margin: var(--space-5) 0 var(--space-2); font-size: 13px; font-weight: 600; }
+.pay-types { display: flex; gap: var(--space-2); }
+.pay-type { flex: 1; padding: 12px 0; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); font-size: 14px; color: var(--color-text-secondary); transition: all var(--dur-fast) ease; }
+.pay-type:hover { border-color: var(--color-primary-border); color: var(--color-primary); }
+.pay-type.active { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
+.pay-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-5); }
+.pay-hint { margin-top: var(--space-3); font-size: 12px; text-align: center; color: var(--color-text-tertiary); }
 
 @media (max-width: 760px) {
   .detail-head { flex-direction: column; }

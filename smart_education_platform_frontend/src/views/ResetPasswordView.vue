@@ -14,7 +14,6 @@ const form = reactive({
 })
 
 const errors = reactive({ target: '', code: '', new_password: '', confirm_password: '' })
-const sentCode = ref('')
 const sending = ref(false)
 const loading = ref(false)
 
@@ -26,11 +25,8 @@ async function onSendCode(): Promise<void> {
   errors.target = ''
   sending.value = true
   try {
-    const data = await sendResetCode(form.target.trim())
-    // 开发环境验证码直接回传，自动填入便于联调
-    sentCode.value = data.code
-    form.code = data.code
-    showToast('验证码已发送（开发环境直接回显）', 'success')
+    await sendResetCode(form.target.trim())
+    showToast('验证码已发送，请查看后端控制台日志', 'success')
   } catch {
     /* 已提示 */
   } finally {
@@ -91,7 +87,6 @@ async function submit(): Promise<void> {
           </button>
         </div>
         <p v-if="errors.target" class="form-error" role="alert">{{ errors.target }}</p>
-        <p v-if="sentCode" class="code-hint">验证码（开发环境回显）：{{ sentCode }}</p>
       </div>
 
       <div class="form-item">
@@ -169,10 +164,5 @@ async function submit(): Promise<void> {
   color: var(--color-primary);
   border-color: var(--color-primary-border);
   box-shadow: none;
-}
-
-.code-hint {
-  font-size: 12px;
-  color: var(--color-warning);
 }
 </style>

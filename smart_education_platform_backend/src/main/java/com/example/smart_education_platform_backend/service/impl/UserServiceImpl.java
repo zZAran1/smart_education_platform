@@ -13,7 +13,6 @@ import com.example.smart_education_platform_backend.model.dto.ResetPasswordDTO;
 import com.example.smart_education_platform_backend.model.dto.UpdateProfileDTO;
 import com.example.smart_education_platform_backend.model.entity.Users;
 import com.example.smart_education_platform_backend.model.vo.LoginVO;
-import com.example.smart_education_platform_backend.model.vo.ResetCodeVO;
 import com.example.smart_education_platform_backend.model.vo.UserVO;
 import com.example.smart_education_platform_backend.service.CaptchaService;
 import com.example.smart_education_platform_backend.service.UserService;
@@ -21,6 +20,7 @@ import com.example.smart_education_platform_backend.util.BCryptPasswordUtil;
 import com.example.smart_education_platform_backend.util.JwtUtil;
 import com.example.smart_education_platform_backend.util.UserContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -35,6 +35,7 @@ import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, Users> implements UserService {
@@ -101,11 +102,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, Users> implements U
     }
 
     @Override
-    public ResetCodeVO sendResetCode(String target) {
-        // 注：当前未接入短信/邮件网关，验证码直接回传用于联调
+    public void sendResetCode(String target) {
         String code = String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
         redisTemplate.opsForValue().set(RESET_CODE_KEY_PREFIX + target, code, RESET_CODE_TTL);
-        return new ResetCodeVO(code);
+        // 课程设计简化：验证码不回传响应体，只打印到后端日志便于本地调试。
+        // 生产环境应改为经短信/邮件网关下发，并删除此日志输出。
+        log.info("【重置密码验证码】target={}, code={}, 有效期={}分钟", target, code, RESET_CODE_TTL.toMinutes());
     }
 
     @Override
@@ -144,10 +146,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, Users> implements U
 
     @Override
     public UserVO updateProfile(UpdateProfileDTO dto) {
+        boolean hasNickname = StringUtils.hasText(dto.getNickname());
+        boolean hasRealName = StringUtils.hasText(dto.getReal_name());
+        // 两字段都为空时会生成不带 SET 子句的 UPDATE 导致 SQL 语法错误，提前拦截
+        if (!hasNickname && !hasRealName) {
+            throw new ProfileException("请至少填写一项要修改的资料");
+        }
         Long userId = UserContext.getUserId();
         lambdaUpdate().eq(Users::getId, userId)
-                .set(StringUtils.hasText(dto.getNickname()), Users::getNickname, dto.getNickname())
-                .set(StringUtils.hasText(dto.getReal_name()), Users::getReal_name, dto.getReal_name())
+                .set(hasNickname, Users::getNickname, dto.getNickname())
+                .set(hasRealName, Users::getReal_name, dto.getReal_name())
                 .update();
         return Converter.INSTANCE.toUserVO(getById(userId));
     }

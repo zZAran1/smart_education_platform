@@ -4,7 +4,6 @@ import type {
   LoginParams,
   LoginVO,
   RegisterParams,
-  ResetCodeVO,
   ResetPasswordParams,
   UpdateProfileParams,
   UserVO,
@@ -19,8 +18,8 @@ export const registerUser = (data: RegisterParams) => http.post<void>('/user/reg
 /** 用户登录（验证码一次性） */
 export const loginUser = (data: LoginParams) => http.post<LoginVO>('/user/login', data)
 
-/** 下发重置密码验证码（开发环境 code 直接回传） */
-export const sendResetCode = (target: string) => http.post<ResetCodeVO>('/user/reset-code', { target })
+/** 下发重置密码验证码（验证码只打印在后端日志，不在响应体返回） */
+export const sendResetCode = (target: string) => http.post<void>('/user/reset-code', { target })
 
 /** 通过验证码重置密码 */
 export const resetPassword = (data: ResetPasswordParams) => http.post<void>('/user/reset-password', data)

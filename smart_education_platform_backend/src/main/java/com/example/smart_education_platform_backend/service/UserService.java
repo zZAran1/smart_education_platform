@@ -7,7 +7,6 @@ import com.example.smart_education_platform_backend.model.dto.ResetPasswordDTO;
 import com.example.smart_education_platform_backend.model.dto.UpdateProfileDTO;
 import com.example.smart_education_platform_backend.model.entity.Users;
 import com.example.smart_education_platform_backend.model.vo.LoginVO;
-import com.example.smart_education_platform_backend.model.vo.ResetCodeVO;
 import com.example.smart_education_platform_backend.model.vo.UserVO;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,8 +18,8 @@ public interface UserService extends IService<Users> {
     /** 用户登录：图形验证码校验、连续失败限制、封禁校验，成功签发 JWT */
     LoginVO login(LoginDTO dto);
 
-    /** 下发重置密码验证码：Redis edu:reset:{target}，5 分钟有效 */
-    ResetCodeVO sendResetCode(String target);
+    /** 下发重置密码验证码：写入 Redis（5 分钟有效），验证码仅输出到后端日志，不在响应体返回 */
+    void sendResetCode(String target);
 
     /** 通过邮箱/手机验证码重置密码（验证码一次性） */
     void resetPassword(ResetPasswordDTO dto);

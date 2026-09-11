@@ -7,7 +7,6 @@ import com.example.smart_education_platform_backend.model.dto.ResetPasswordDTO;
 import com.example.smart_education_platform_backend.model.dto.UpdateProfileDTO;
 import com.example.smart_education_platform_backend.model.vo.CaptchaVO;
 import com.example.smart_education_platform_backend.model.vo.LoginVO;
-import com.example.smart_education_platform_backend.model.vo.ResetCodeVO;
 import com.example.smart_education_platform_backend.model.vo.UserVO;
 import com.example.smart_education_platform_backend.result.Result;
 import com.example.smart_education_platform_backend.service.CaptchaService;
@@ -52,8 +51,9 @@ public class UserController {
     }
 
     @PostMapping("/reset-code")
-    public Result<ResetCodeVO> resetCode(@Valid @RequestBody ResetCodeDTO dto) {
-        return Result.success(userService.sendResetCode(dto.getTarget()));
+    public Result<Void> resetCode(@Valid @RequestBody ResetCodeDTO dto) {
+        userService.sendResetCode(dto.getTarget());
+        return Result.success("验证码已发送，请查看后端控制台日志");
     }
 
     @PostMapping("/reset-password")

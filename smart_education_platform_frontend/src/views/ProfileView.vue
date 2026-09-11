@@ -59,10 +59,12 @@ async function onAvatarChange(e: Event): Promise<void> {
   if (!file || uploading.value) return
   if (!['image/jpeg', 'image/png'].includes(file.type)) {
     showToast('头像仅支持 JPG/PNG', 'error')
+    input.value = ''
     return
   }
   if (file.size > 2 * 1024 * 1024) {
     showToast('头像大小不能超过 2MB', 'error')
+    input.value = ''
     return
   }
   uploading.value = true

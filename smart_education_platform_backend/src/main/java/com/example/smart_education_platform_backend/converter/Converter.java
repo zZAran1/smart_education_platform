@@ -10,6 +10,8 @@ import com.example.smart_education_platform_backend.model.entity.CourseQa;
 import com.example.smart_education_platform_backend.model.entity.Job;
 import com.example.smart_education_platform_backend.model.entity.JobCategory;
 import com.example.smart_education_platform_backend.model.entity.Users;
+import com.example.smart_education_platform_backend.model.vo.AdminCommentVO;
+import com.example.smart_education_platform_backend.model.vo.AdminQuestionVO;
 import com.example.smart_education_platform_backend.model.vo.CourseCardVO;
 import com.example.smart_education_platform_backend.model.vo.CourseCategoryVO;
 import com.example.smart_education_platform_backend.model.vo.CourseChapterVO;
@@ -70,4 +72,8 @@ public interface Converter {
     Course toCourse(AdminCourseDTO dto);
 
     Job toJob(AdminJobDTO dto);
+
+    List<AdminCommentVO> toAdminCommentVOList(List<CourseComment> comments);
+
+    List<AdminQuestionVO> toAdminQuestionVOList(List<CourseQa> qas);
 }
