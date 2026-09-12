@@ -37,11 +37,8 @@ function selectAll(): void {
 
 function selectSystem(system: JobCategoryVO): void {
   filters.system_id = system.id
-  filters.category_id = null
-  // 若一级下无二级分类，则直接按该一级过滤（后端 category_id 兼容）
-  if (!system.children || system.children.length === 0) {
-    filters.category_id = system.id
-  }
+  // 一级分类直接下传自身 id：后端会把它展开为「该一级 + 其下所有二级」，即筛选该一级下的全部职位
+  filters.category_id = system.id
   resetAndFetch()
 }
 

@@ -151,12 +151,20 @@ onMounted(refreshCaptcha)
       <p class="auth-link">
         还没有账号？
         <RouterLink to="/register">立即注册</RouterLink>
+        <span class="link-sep" aria-hidden="true">·</span>
+        <RouterLink to="/reset-password">忘记密码？</RouterLink>
       </p>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* 登录页底部两个入口之间的分隔符 */
+.link-sep {
+  margin-left: 6px;
+  color: var(--color-border-strong);
+}
+
 /* 密码框：显示/隐藏切换 */
 .pwd-wrap {
   position: relative;

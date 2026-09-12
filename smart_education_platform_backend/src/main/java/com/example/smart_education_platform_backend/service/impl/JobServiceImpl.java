@@ -22,6 +22,8 @@ import com.example.smart_education_platform_backend.model.entity.JobCollection;
 import com.example.smart_education_platform_backend.model.vo.JobCardVO;
 import com.example.smart_education_platform_backend.model.vo.JobCategoryVO;
 import com.example.smart_education_platform_backend.model.vo.JobDetailVO;
+import com.example.smart_education_platform_backend.model.vo.MyInterviewVO;
+import com.example.smart_education_platform_backend.model.vo.MyJobApplicationVO;
 import com.example.smart_education_platform_backend.service.JobService;
 import com.example.smart_education_platform_backend.util.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,8 +84,10 @@ public class JobServiceImpl extends ServiceImpl<JobMapper, Job> implements JobSe
     @Cacheable(cacheNames = "jobList", key = "#dto.toString()")
     public Page<JobCardVO> pageJobs(JobQueryDTO dto) {
         LambdaQueryWrapper<Job> wrapper = new LambdaQueryWrapper<Job>()
-                .eq(Job::getStatus, STATUS_ON_SHELF)
-                .eq(dto.getCategory_id() != null, Job::getCategory_id, dto.getCategory_id());
+                .eq(Job::getStatus, STATUS_ON_SHELF);
+        if (dto.getCategory_id() != null) {
+            wrapper.in(Job::getCategory_id, expandCategoryIds(dto.getCategory_id()));
+        }
 
         String keyword = dto.getKeyword();
         String searchType = dto.getSearch_type() == null ? "job" : dto.getSearch_type();
@@ -229,6 +234,131 @@ public class JobServiceImpl extends ServiceImpl<JobMapper, Job> implements JobSe
         interview.setStatus(0);
         aiInterviewMapper.insert(interview);
         return interview.getId();
+    }
+
+    @Override
+    public Page<MyJobApplicationVO> pageMyApplications(Integer pageNum, Integer pageSize, Integer status) {
+        Long userId = UserContext.getUserId();
+        Page<JobApplication> page = jobApplicationMapper.selectPage(
+                new Page<>(pageNumOr(pageNum), pageSizeOr(pageSize)),
+                new LambdaQueryWrapper<JobApplication>()
+                        .eq(JobApplication::getUser_id, userId)
+                        .eq(status != null, JobApplication::getStatus, status)
+                        .orderByDesc(JobApplication::getId));
+
+        Map<Long, Job> jobMap = jobMapByIds(page.getRecords().stream()
+                .map(JobApplication::getJob_id).collect(Collectors.toSet()));
+        Map<Long, Company> companyMap = companyMapByIds(jobMap.values().stream()
+                .map(Job::getCompany_id).filter(id -> id != null).collect(Collectors.toSet()));
+
+        List<MyJobApplicationVO> records = page.getRecords().stream().map(application -> {
+            MyJobApplicationVO vo = new MyJobApplicationVO();
+            vo.setId(application.getId());
+            vo.setJob_id(application.getJob_id());
+            vo.setStatus(application.getStatus());
+            vo.setCreated_at(application.getCreated_at());
+
+            Job job = jobMap.get(application.getJob_id());
+            if (job != null) {
+                vo.setJob_title(job.getTitle());
+                vo.setCity(job.getCity());
+                vo.setSalary_min(job.getSalary_min());
+                vo.setSalary_max(job.getSalary_max());
+                vo.setCompany_id(job.getCompany_id());
+                Company company = companyMap.get(job.getCompany_id());
+                if (company != null) {
+                    vo.setCompany_name(company.getName());
+                }
+            }
+            return vo;
+        }).toList();
+
+        Page<MyJobApplicationVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        voPage.setRecords(records);
+        return voPage;
+    }
+
+    @Override
+    public Page<MyInterviewVO> pageMyInterviews(Integer pageNum, Integer pageSize, Integer status) {
+        Long userId = UserContext.getUserId();
+        Page<AiInterview> page = aiInterviewMapper.selectPage(
+                new Page<>(pageNumOr(pageNum), pageSizeOr(pageSize)),
+                new LambdaQueryWrapper<AiInterview>()
+                        .eq(AiInterview::getUser_id, userId)
+                        .eq(status != null, AiInterview::getStatus, status)
+                        .orderByDesc(AiInterview::getId));
+
+        Map<Long, Job> jobMap = jobMapByIds(page.getRecords().stream()
+                .map(AiInterview::getJob_id).collect(Collectors.toSet()));
+        Map<Long, Company> companyMap = companyMapByIds(jobMap.values().stream()
+                .map(Job::getCompany_id).filter(id -> id != null).collect(Collectors.toSet()));
+
+        List<MyInterviewVO> records = page.getRecords().stream().map(interview -> {
+            MyInterviewVO vo = new MyInterviewVO();
+            vo.setId(interview.getId());
+            vo.setJob_id(interview.getJob_id());
+            vo.setApplication_id(interview.getApplication_id());
+            vo.setStatus(interview.getStatus());
+            vo.setInterview_time(interview.getInterview_time());
+            vo.setReport(interview.getReport());
+            vo.setCreated_at(interview.getCreated_at());
+
+            Job job = jobMap.get(interview.getJob_id());
+            if (job != null) {
+                vo.setJob_title(job.getTitle());
+                vo.setCompany_id(job.getCompany_id());
+                Company company = companyMap.get(job.getCompany_id());
+                if (company != null) {
+                    vo.setCompany_name(company.getName());
+                }
+            }
+            return vo;
+        }).toList();
+
+        Page<MyInterviewVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        voPage.setRecords(records);
+        return voPage;
+    }
+
+    /**
+     * 分类筛选实际命中的分类 id 集合。
+     * 职位的 category_id 存的是一级分类下的二级分类，因此点一级分类时要连带其下所有二级分类一起命中，
+     * 否则按一级筛选会得到 0 条；点二级分类时其下没有子级，退化为精确匹配。
+     */
+    private List<Long> expandCategoryIds(Long categoryId) {
+        List<Long> categoryIds = new ArrayList<>();
+        categoryIds.add(categoryId);
+        jobCategoryMapper.selectList(new LambdaQueryWrapper<JobCategory>()
+                        .eq(JobCategory::getParent_id, categoryId))
+                .forEach(child -> categoryIds.add(child.getId()));
+        return categoryIds;
+    }
+
+    /** 职位被删除时查不到，对应字段留空，但投递/面试记录仍然返回 */
+    private Map<Long, Job> jobMapByIds(Set<Long> jobIds) {
+        if (jobIds.isEmpty()) {
+            return Map.of();
+        }
+        return listByIds(jobIds).stream()
+                .collect(Collectors.toMap(Job::getId, job -> job, (a, b) -> a));
+    }
+
+    private Map<Long, Company> companyMapByIds(Set<Long> companyIds) {
+        if (companyIds.isEmpty()) {
+            return Map.of();
+        }
+        return companyMapper.selectBatchIds(companyIds).stream()
+                .collect(Collectors.toMap(Company::getId, company -> company, (a, b) -> a));
+    }
+
+    /** 分页参数兜底：空串参数会被绑定为 null，直接传入 Page 会因自动拆箱抛 NPE */
+    private static long pageNumOr(Integer value) {
+        return value == null || value < 1 ? 1L : value;
+    }
+
+    /** 同上，并限制每页上限，避免超大 page_size 造成慢查询 */
+    private static long pageSizeOr(Integer value) {
+        return value == null || value < 1 ? 10L : Math.min(value, 100);
     }
 
     private void fillJobCompanies(List<JobCardVO> records) {

@@ -11,6 +11,7 @@ import com.example.smart_education_platform_backend.model.vo.CourseCommentVO;
 import com.example.smart_education_platform_backend.model.vo.CourseDetailVO;
 import com.example.smart_education_platform_backend.model.vo.CourseEnrollVO;
 import com.example.smart_education_platform_backend.model.vo.CourseQuestionVO;
+import com.example.smart_education_platform_backend.model.vo.MyCourseVO;
 import com.example.smart_education_platform_backend.result.Result;
 import com.example.smart_education_platform_backend.service.CourseService;
 import jakarta.validation.Valid;
@@ -46,6 +47,13 @@ public class CourseController {
     @GetMapping("/{id}")
     public Result<CourseDetailVO> detail(@PathVariable Long id) {
         return Result.success(courseService.getCourseDetail(id));
+    }
+
+    /** 我的课程：当前登录用户的报名记录 + 学习进度 */
+    @GetMapping("/my")
+    public Result<Page<MyCourseVO>> my(@RequestParam(defaultValue = "1") Integer page_num,
+                                       @RequestParam(defaultValue = "10") Integer page_size) {
+        return Result.success(courseService.pageMyCourses(page_num, page_size));
     }
 
     @GetMapping("/{id}/chapters")

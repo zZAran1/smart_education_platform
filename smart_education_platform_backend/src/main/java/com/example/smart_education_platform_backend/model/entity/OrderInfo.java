@@ -18,9 +18,7 @@ public class OrderInfo {
     private BigDecimal amount;
     private Integer pay_type;
     private Integer status;
-    private String trade_no;
     private LocalDateTime pay_time;
-    private LocalDateTime notify_time;
     private Integer deleted;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;

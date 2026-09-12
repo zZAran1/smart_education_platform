@@ -8,6 +8,8 @@ import com.example.smart_education_platform_backend.model.entity.Job;
 import com.example.smart_education_platform_backend.model.vo.JobCardVO;
 import com.example.smart_education_platform_backend.model.vo.JobCategoryVO;
 import com.example.smart_education_platform_backend.model.vo.JobDetailVO;
+import com.example.smart_education_platform_backend.model.vo.MyInterviewVO;
+import com.example.smart_education_platform_backend.model.vo.MyJobApplicationVO;
 
 import java.util.List;
 
@@ -33,4 +35,10 @@ public interface JobService extends IService<Job> {
 
     /** 申请 AI 面试（须已投递该职位），返回面试记录 ID */
     Long applyAiInterview(Long jobId);
+
+    /** 我的投递：当前登录用户的投递记录 + 职位/公司信息，按投递时间倒序 */
+    Page<MyJobApplicationVO> pageMyApplications(Integer pageNum, Integer pageSize, Integer status);
+
+    /** 我的数字人面试：当前登录用户的面试记录 + 职位/公司信息，按申请时间倒序 */
+    Page<MyInterviewVO> pageMyInterviews(Integer pageNum, Integer pageSize, Integer status);
 }

@@ -6,6 +6,8 @@ import com.example.smart_education_platform_backend.model.dto.JobQueryDTO;
 import com.example.smart_education_platform_backend.model.vo.JobCardVO;
 import com.example.smart_education_platform_backend.model.vo.JobCategoryVO;
 import com.example.smart_education_platform_backend.model.vo.JobDetailVO;
+import com.example.smart_education_platform_backend.model.vo.MyInterviewVO;
+import com.example.smart_education_platform_backend.model.vo.MyJobApplicationVO;
 import com.example.smart_education_platform_backend.result.Result;
 import com.example.smart_education_platform_backend.service.JobService;
 import jakarta.validation.Valid;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -56,5 +59,21 @@ public class JobController {
     @PostMapping("/{id}/ai-interview")
     public Result<Long> aiInterview(@PathVariable Long id) {
         return Result.success(jobService.applyAiInterview(id));
+    }
+
+    /** 我的投递：当前登录用户的投递记录 + 职位/公司信息 */
+    @GetMapping("/my-applications")
+    public Result<Page<MyJobApplicationVO>> myApplications(@RequestParam(defaultValue = "1") Integer page_num,
+                                                           @RequestParam(defaultValue = "10") Integer page_size,
+                                                           @RequestParam(required = false) Integer status) {
+        return Result.success(jobService.pageMyApplications(page_num, page_size, status));
+    }
+
+    /** 我的数字人面试：当前登录用户的面试记录 + 职位/公司信息 */
+    @GetMapping("/my-interviews")
+    public Result<Page<MyInterviewVO>> myInterviews(@RequestParam(defaultValue = "1") Integer page_num,
+                                                    @RequestParam(defaultValue = "10") Integer page_size,
+                                                    @RequestParam(required = false) Integer status) {
+        return Result.success(jobService.pageMyInterviews(page_num, page_size, status));
     }
 }

@@ -198,7 +198,7 @@ async function onEnroll(): Promise<void> {
   try {
     const result = await enrollCourse(courseId.value)
     if (result.enrolled) {
-      showToast('报名成功，开始学习吧', 'success')
+      showToast('报名成功，已加入个人中心「我的课程」', 'success')
       await fetchDetail()
     } else if (result.order_no) {
       // 收费课程：唤起支付弹层，由用户选择支付方式后完成支付

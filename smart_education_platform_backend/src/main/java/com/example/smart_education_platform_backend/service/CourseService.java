@@ -13,6 +13,7 @@ import com.example.smart_education_platform_backend.model.vo.CourseCommentVO;
 import com.example.smart_education_platform_backend.model.vo.CourseDetailVO;
 import com.example.smart_education_platform_backend.model.vo.CourseEnrollVO;
 import com.example.smart_education_platform_backend.model.vo.CourseQuestionVO;
+import com.example.smart_education_platform_backend.model.vo.MyCourseVO;
 
 import java.util.List;
 
@@ -53,4 +54,7 @@ public interface CourseService extends IService<Course> {
 
     /** 标记章节/资源学完，更新学习进展 */
     void finishChapter(Long chapterId);
+
+    /** 我的课程：当前登录用户的报名记录 + 课程信息 + 学习进度，按报名时间倒序 */
+    Page<MyCourseVO> pageMyCourses(Integer pageNum, Integer pageSize);
 }

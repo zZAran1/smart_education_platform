@@ -31,6 +31,7 @@ import {
   deleteCompany,
 } from '@/api/admin'
 import { showToast } from '@/composables/toast'
+import { getJobCategories } from '@/api/job'
 import {
   APPLICATION_STATUS_MAP,
   COURSE_TYPE_MAP,
@@ -53,6 +54,7 @@ import {
   type CourseChapter,
   type Job,
   type JobApplication,
+  type JobCategoryVO,
   type OrderInfo,
   type UserVO,
 } from '@/types/api'
@@ -129,6 +131,14 @@ const answerText = ref('')
 
 /** 职位表单的公司下拉选项 */
 const companyOptions = ref<Company[]>([])
+
+/** 职位表单的分类下拉：一级只用于筛选二级，最终提交二级分类 id */
+const jobCategories = ref<JobCategoryVO[]>([])
+const rootCategoryId = ref<number | null>(null)
+const childCategories = computed(() => {
+  if (rootCategoryId.value == null) return []
+  return jobCategories.value.find((c) => c.id === rootCategoryId.value)?.children || []
+})
 
 /* ---------- 课程表单 ---------- */
 const showCourseForm = ref(false)
@@ -226,9 +236,29 @@ async function load(): Promise<void> {
       }
     }
   } catch {
-    /* 已提示 */
+    // 请求失败时清空当前 tab 的列表与分页总数，避免残留上一个 tab 的 total，
+    // 否则会渲染出"有表头但无数据行"的空表，而不是"暂无数据"空状态
+    if (seq === loadSeq) {
+      total.value = 0
+      clearCurrentList()
+    }
   } finally {
     if (seq === loadSeq) loading.value = false
+  }
+}
+
+/** 清空当前 tab 的列表数据（请求失败时使用） */
+function clearCurrentList(): void {
+  switch (activeTab.value) {
+    case 'users': users.value = []; break
+    case 'courses': courses.value = []; break
+    case 'jobs': jobs.value = []; break
+    case 'orders': orders.value = []; break
+    case 'applications': applications.value = []; break
+    case 'interviews': interviews.value = []; break
+    case 'companies': companies.value = []; break
+    case 'comments': adminComments.value = []; break
+    default: adminQuestions.value = []; break
   }
 }
 
@@ -354,14 +384,16 @@ async function onToggleCourse(course: Course): Promise<void> {
 }
 
 /* ---------- 职位 ---------- */
-function openCreateJob(): void {
+async function openCreateJob(): Promise<void> {
   editingJobId.value = null
   Object.assign(jobForm, { title: '', city: '', address: '', salary_min: null, salary_max: null, headcount: 1, company_id: 0, category_id: null, expire_time: '', description: '', requirement: '' })
+  rootCategoryId.value = null
   showJobForm.value = true
+  await loadJobCategories()
   loadCompanyOptions()
 }
 
-function openEditJob(job: Job): void {
+async function openEditJob(job: Job): Promise<void> {
   editingJobId.value = job.id
   Object.assign(jobForm, {
     title: job.title,
@@ -377,7 +409,26 @@ function openEditJob(job: Job): void {
     requirement: job.requirement || '',
   })
   showJobForm.value = true
+  await loadJobCategories()
+  // 由已有的二级分类反查所属一级分类，保证编辑时两级下拉都能正确回填
+  rootCategoryId.value =
+    jobCategories.value.find((c) => (c.children || []).some((child) => child.id === job.category_id))?.id ?? null
   loadCompanyOptions()
+}
+
+/** 加载职位分类树（两级），供职位表单选择；分类基本不变，只在首次打开时拉取 */
+async function loadJobCategories(): Promise<void> {
+  if (jobCategories.value.length > 0) return
+  try {
+    jobCategories.value = await getJobCategories()
+  } catch {
+    /* 已提示 */
+  }
+}
+
+/** 切换一级分类时清空二级选择，避免提交到与一级不匹配的二级分类 */
+function onRootCategoryChange(): void {
+  jobForm.category_id = null
 }
 
 /** 加载公司下拉选项（供职位表单选择所属公司） */
@@ -393,6 +444,11 @@ async function loadCompanyOptions(): Promise<void> {
 async function submitJob(): Promise<void> {
   if (!jobForm.title.trim() || !jobForm.company_id) {
     showToast('请填写职位名称并选择所属公司', 'error')
+    return
+  }
+  // 分类决定该职位在前台「实习就业」按分类筛选时能否被检索到，故必填
+  if (!jobForm.category_id) {
+    showToast('请选择职位分类', 'error')
     return
   }
   // datetime-local 的值形如 2026-01-01T12:00，补秒后即为后端 LocalDateTime 要求的 ISO-8601
@@ -729,6 +785,20 @@ onMounted(load)
           <select v-model.number="jobForm.company_id" class="form-input">
             <option :value="0" disabled>请选择公司</option>
             <option v-for="co in companyOptions" :key="co.id" :value="co.id">{{ co.name }}</option>
+          </select>
+        </div>
+        <div class="form-item">
+          <label>职位分类</label>
+          <select v-model.number="rootCategoryId" class="form-input" @change="onRootCategoryChange">
+            <option :value="null" disabled>请选择一级分类</option>
+            <option v-for="c in jobCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+        <div class="form-item">
+          <label>细分方向</label>
+          <select v-model.number="jobForm.category_id" class="form-input" :disabled="rootCategoryId === null">
+            <option :value="null" disabled>{{ rootCategoryId === null ? '请先选择一级分类' : '请选择细分方向' }}</option>
+            <option v-for="c in childCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
         </div>
         <div class="form-item">

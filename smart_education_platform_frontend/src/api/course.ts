@@ -7,6 +7,7 @@ import type {
   CourseEnrollVO,
   CourseQueryParams,
   CourseQuestionVO,
+  MyCourseVO,
   Page,
   CourseCardVO,
 } from '@/types/api'
@@ -30,6 +31,10 @@ export const toggleCourseCollect = (id: number) => http.post<boolean>(`/course/$
 
 /** 立即学习：免费直接报名，收费生成待支付订单 */
 export const enrollCourse = (id: number) => http.post<CourseEnrollVO>(`/course/${id}/enroll`)
+
+/** 我的课程：当前登录用户的报名记录 + 学习进度（后端按 Token 识别用户） */
+export const getMyCourses = (page_num = 1, page_size = 10) =>
+  http.get<Page<MyCourseVO>>('/course/my', { page_num, page_size })
 
 /** 课程评论分页 */
 export const getCourseComments = (id: number, page_num = 1, page_size = 10) =>

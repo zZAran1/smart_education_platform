@@ -1,5 +1,13 @@
 import { http } from './request'
-import type { JobCardVO, JobCategoryVO, JobDetailVO, JobQueryParams, Page } from '@/types/api'
+import type {
+  JobCardVO,
+  JobCategoryVO,
+  JobDetailVO,
+  JobQueryParams,
+  MyInterviewVO,
+  MyJobApplicationVO,
+  Page,
+} from '@/types/api'
 
 /** 职位分类树（两级） */
 export const getJobCategories = () => http.get<JobCategoryVO[]>('/job/categories')
@@ -20,6 +28,14 @@ export const applyJob = (id: number, resume_url?: string) =>
 
 /** 申请 AI 面试（须已投递），返回面试记录 ID */
 export const applyAiInterview = (id: number) => http.post<number>(`/job/${id}/ai-interview`)
+
+/** 我的投递：当前登录用户的投递记录 + 职位/公司信息（后端按 Token 识别用户） */
+export const getMyApplications = (page_num = 1, page_size = 10) =>
+  http.get<Page<MyJobApplicationVO>>('/job/my-applications', { page_num, page_size })
+
+/** 我的数字人面试：当前登录用户的面试记录 + 职位/公司信息 */
+export const getMyInterviews = (page_num = 1, page_size = 10) =>
+  http.get<Page<MyInterviewVO>>('/job/my-interviews', { page_num, page_size })
 
 function buildQuery(params: JobQueryParams): Record<string, unknown> {
   const query: Record<string, unknown> = {}

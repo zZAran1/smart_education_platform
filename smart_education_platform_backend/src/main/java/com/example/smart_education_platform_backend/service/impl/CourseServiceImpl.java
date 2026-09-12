@@ -35,6 +35,7 @@ import com.example.smart_education_platform_backend.model.vo.CourseCommentVO;
 import com.example.smart_education_platform_backend.model.vo.CourseDetailVO;
 import com.example.smart_education_platform_backend.model.vo.CourseEnrollVO;
 import com.example.smart_education_platform_backend.model.vo.CourseQuestionVO;
+import com.example.smart_education_platform_backend.model.vo.MyCourseVO;
 import com.example.smart_education_platform_backend.service.CourseService;
 import com.example.smart_education_platform_backend.util.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -215,7 +216,8 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
             enrollment.setCourse_id(courseId);
             enrollment.setProgress(0);
             enrollment.setFinish_count(0);
-            enrollment.setTotal_count(0);
+            // 分母按课程当前章节数初始化，否则新报名未学习的课程会显示成 0/0
+            enrollment.setTotal_count(countChapters(courseId));
             courseEnrollmentMapper.insert(enrollment);
             lambdaUpdate().eq(Course::getId, courseId)
                     .setSql("student_count = student_count + 1")
@@ -376,8 +378,70 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         courseEnrollmentMapper.updateById(enrollment);
     }
 
+    @Override
+    public Page<MyCourseVO> pageMyCourses(Integer pageNum, Integer pageSize) {
+        Long userId = UserContext.getUserId();
+        Page<CourseEnrollment> page = courseEnrollmentMapper.selectPage(
+                new Page<>(pageNumOr(pageNum), pageSizeOr(pageSize)),
+                new LambdaQueryWrapper<CourseEnrollment>()
+                        .eq(CourseEnrollment::getUser_id, userId)
+                        .orderByDesc(CourseEnrollment::getId));
+
+        Set<Long> courseIds = page.getRecords().stream()
+                .map(CourseEnrollment::getCourse_id)
+                .collect(Collectors.toSet());
+        // 课程被删除时查不到，对应字段留空，但报名记录仍然返回
+        Map<Long, Course> courseMap = courseIds.isEmpty() ? Map.of()
+                : listByIds(courseIds).stream()
+                        .collect(Collectors.toMap(Course::getId, c -> c, (a, b) -> a));
+
+        List<MyCourseVO> records = page.getRecords().stream().map(enrollment -> {
+            MyCourseVO vo = new MyCourseVO();
+            vo.setId(enrollment.getId());
+            vo.setCourse_id(enrollment.getCourse_id());
+            vo.setProgress(enrollment.getProgress());
+            vo.setFinish_count(enrollment.getFinish_count());
+            vo.setTotal_count(enrollment.getTotal_count());
+            vo.setEnroll_time(enrollment.getCreated_at());
+
+            Course course = courseMap.get(enrollment.getCourse_id());
+            if (course != null) {
+                vo.setTitle(course.getTitle());
+                vo.setCover(course.getCover());
+                vo.setType(course.getType());
+                vo.setLevel(course.getLevel());
+                vo.setTeacher_name(course.getTeacher_name());
+                vo.setIs_free(course.getIs_free());
+                vo.setScore(course.getScore());
+                vo.setStudent_count(course.getStudent_count());
+            }
+            return vo;
+        }).toList();
+
+        Page<MyCourseVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        voPage.setRecords(records);
+        return voPage;
+    }
+
     private String generateOrderNo() {
         return System.currentTimeMillis() + String.format("%04d", ThreadLocalRandom.current().nextInt(10000));
+    }
+
+    /** 课程当前章节总数：作为学习进度的分母，报名时即初始化，避免进度显示成 0/0 */
+    private int countChapters(Long courseId) {
+        Long total = courseChapterMapper.selectCount(new LambdaQueryWrapper<CourseChapter>()
+                .eq(CourseChapter::getCourse_id, courseId));
+        return total == null ? 0 : total.intValue();
+    }
+
+    /** 分页参数兜底：空串参数会被绑定为 null，直接传入 Page 会因自动拆箱抛 NPE */
+    private static long pageNumOr(Integer value) {
+        return value == null || value < 1 ? 1L : value;
+    }
+
+    /** 同上，并限制每页上限，避免超大 page_size 造成慢查询 */
+    private static long pageSizeOr(Integer value) {
+        return value == null || value < 1 ? 10L : Math.min(value, 100);
     }
 
     private void fillCommentUsers(List<CourseCommentVO> records) {

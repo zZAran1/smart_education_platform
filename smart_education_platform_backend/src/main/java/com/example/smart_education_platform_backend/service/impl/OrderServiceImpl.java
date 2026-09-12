@@ -2,13 +2,17 @@ package com.example.smart_education_platform_backend.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.smart_education_platform_backend.exception.OrderException;
+import com.example.smart_education_platform_backend.mapper.CourseChapterMapper;
 import com.example.smart_education_platform_backend.mapper.CourseEnrollmentMapper;
 import com.example.smart_education_platform_backend.mapper.CourseMapper;
 import com.example.smart_education_platform_backend.mapper.OrderInfoMapper;
 import com.example.smart_education_platform_backend.model.entity.Course;
+import com.example.smart_education_platform_backend.model.entity.CourseChapter;
 import com.example.smart_education_platform_backend.model.entity.CourseEnrollment;
 import com.example.smart_education_platform_backend.model.entity.OrderInfo;
+import com.example.smart_education_platform_backend.model.vo.MyOrderVO;
 import com.example.smart_education_platform_backend.service.OrderService;
 import com.example.smart_education_platform_backend.util.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +39,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderInfoMapper orderInfoMapper;
     private final CourseEnrollmentMapper courseEnrollmentMapper;
     private final CourseMapper courseMapper;
+    private final CourseChapterMapper courseChapterMapper;
 
     @Override
     @Transactional
@@ -69,12 +78,71 @@ public class OrderServiceImpl implements OrderService {
         enrollment.setOrder_id(order.getId());
         enrollment.setProgress(0);
         enrollment.setFinish_count(0);
-        enrollment.setTotal_count(0);
+        // 分母按课程当前章节数初始化，否则刚开通未学习的课程会显示成 0/0
+        enrollment.setTotal_count(countChapters(courseId));
         courseEnrollmentMapper.insert(enrollment);
 
         courseMapper.update(null, new LambdaUpdateWrapper<Course>()
                 .eq(Course::getId, courseId)
                 .setSql("student_count = student_count + 1"));
+    }
+
+    @Override
+    public Page<MyOrderVO> pageMyOrders(Integer pageNum, Integer pageSize, Integer status) {
+        Long userId = UserContext.getUserId();
+        Page<OrderInfo> page = orderInfoMapper.selectPage(
+                new Page<>(pageNumOr(pageNum), pageSizeOr(pageSize)),
+                new LambdaQueryWrapper<OrderInfo>()
+                        .eq(OrderInfo::getUser_id, userId)
+                        .eq(status != null, OrderInfo::getStatus, status)
+                        .orderByDesc(OrderInfo::getId));
+
+        Set<Long> courseIds = page.getRecords().stream()
+                .map(OrderInfo::getCourse_id)
+                .collect(Collectors.toSet());
+        // 课程被删除时查不到，课程标题留空，但订单记录仍然返回
+        Map<Long, Course> courseMap = courseIds.isEmpty() ? Map.of()
+                : courseMapper.selectBatchIds(courseIds).stream()
+                        .collect(Collectors.toMap(Course::getId, course -> course, (a, b) -> a));
+
+        List<MyOrderVO> records = page.getRecords().stream().map(order -> {
+            MyOrderVO vo = new MyOrderVO();
+            vo.setId(order.getId());
+            vo.setOrder_no(order.getOrder_no());
+            vo.setCourse_id(order.getCourse_id());
+            vo.setAmount(order.getAmount());
+            vo.setPay_type(order.getPay_type());
+            vo.setStatus(order.getStatus());
+            vo.setCreated_at(order.getCreated_at());
+            vo.setPay_time(order.getPay_time());
+
+            Course course = courseMap.get(order.getCourse_id());
+            if (course != null) {
+                vo.setCourse_title(course.getTitle());
+            }
+            return vo;
+        }).toList();
+
+        Page<MyOrderVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        voPage.setRecords(records);
+        return voPage;
+    }
+
+    /** 分页参数兜底：空串参数会被绑定为 null，直接传入 Page 会因自动拆箱抛 NPE */
+    private static long pageNumOr(Integer value) {
+        return value == null || value < 1 ? 1L : value;
+    }
+
+    /** 同上，并限制每页上限，避免超大 page_size 造成慢查询 */
+    private static long pageSizeOr(Integer value) {
+        return value == null || value < 1 ? 10L : Math.min(value, 100);
+    }
+
+    /** 课程当前章节总数：作为学习进度的分母，开通课程时即初始化，避免进度显示成 0/0 */
+    private int countChapters(Long courseId) {
+        Long total = courseChapterMapper.selectCount(new LambdaQueryWrapper<CourseChapter>()
+                .eq(CourseChapter::getCourse_id, courseId));
+        return total == null ? 0 : total.intValue();
     }
 
     /** 查询属于当前登录用户的订单，避免越权操作他人订单 */

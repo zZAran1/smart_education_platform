@@ -105,8 +105,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, Users> implements U
     public void sendResetCode(String target) {
         String code = String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
         redisTemplate.opsForValue().set(RESET_CODE_KEY_PREFIX + target, code, RESET_CODE_TTL);
-        // 课程设计简化：验证码不回传响应体，只打印到后端日志便于本地调试。
-        // 生产环境应改为经短信/邮件网关下发，并删除此日志输出。
         log.info("【重置密码验证码】target={}, code={}, 有效期={}分钟", target, code, RESET_CODE_TTL.toMinutes());
     }
 

@@ -213,6 +213,11 @@ export const APPLICATION_STATUS_MAP = new Map<number, string>([
 
 /** AI 面试状态：0待进行 1进行中 2已完成 */
 export const INTERVIEW_STATUS = { TODO: 0, DOING: 1, DONE: 2 } as const
+export const INTERVIEW_STATUS_MAP = new Map<number, string>([
+  [INTERVIEW_STATUS.TODO, '待进行'],
+  [INTERVIEW_STATUS.DOING, '进行中'],
+  [INTERVIEW_STATUS.DONE, '已完成'],
+])
 
 /** 答疑状态：0待回复 1已回复 */
 export const QUESTION_STATUS = { PENDING: 0, ANSWERED: 1 } as const
@@ -485,4 +490,74 @@ export interface AdminJobParams {
   expire_time?: string | null
   description?: string | null
   requirement?: string | null
+}
+
+/* ---------- 个人中心：我的记录 ----------
+ * 均为「当前登录用户」维度（后端从 Token 取 userId，不接收 user_id 参数）。
+ * 课程/职位被删除时记录仍返回，但 title 等关联字段为空，前端据此展示「已下架」。
+ */
+
+/** 我的课程（报名记录 + 课程信息 + 学习进度） */
+export interface MyCourseVO {
+  /** 报名记录 ID */
+  id: number
+  course_id: number
+  title: string | null
+  cover: string | null
+  type: number | null
+  level: number | null
+  teacher_name: string | null
+  is_free: number | null
+  score: number | string | null
+  student_count: number | null
+  /** 学习进展 0~100 */
+  progress: number | null
+  finish_count: number | null
+  total_count: number | null
+  enroll_time: string | null
+}
+
+/** 我的订单（订单记录 + 课程标题） */
+export interface MyOrderVO {
+  id: number
+  order_no: string
+  course_id: number
+  course_title: string | null
+  amount: number | string | null
+  pay_type: number | null
+  /** 0待支付 1已支付 2已退款 3已取消 */
+  status: number
+  created_at: string | null
+  pay_time: string | null
+}
+
+/** 我的投递（投递记录 + 职位/公司信息） */
+export interface MyJobApplicationVO {
+  /** 投递记录 ID */
+  id: number
+  job_id: number
+  job_title: string | null
+  city: string | null
+  salary_min: number | null
+  salary_max: number | null
+  company_id: number | null
+  company_name: string | null
+  /** 0待处理 1已查看 2通过 3拒绝 */
+  status: number
+  created_at: string | null
+}
+
+/** 我的数字人面试（面试记录 + 职位/公司信息） */
+export interface MyInterviewVO {
+  id: number
+  job_id: number
+  job_title: string | null
+  company_id: number | null
+  company_name: string | null
+  application_id: number | null
+  /** 0待进行 1进行中 2已完成 */
+  status: number
+  interview_time: string | null
+  report: string | null
+  created_at: string | null
 }

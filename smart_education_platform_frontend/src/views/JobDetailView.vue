@@ -57,7 +57,7 @@ async function onApply(): Promise<void> {
   applyLoading.value = true
   try {
     await applyJob(jobId.value)
-    showToast('投递成功', 'success')
+    showToast('投递成功，可在个人中心「我的投递」查看', 'success')
     await fetchDetail()
   } catch {
     /* 已提示 */
